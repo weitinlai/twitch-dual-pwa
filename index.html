@@ -122,7 +122,12 @@
 
     .controls.collapsed {
       transform: translateY(-100%);
+    }
+
+    .controls.collapsed .control-group,
+    .controls.collapsed .button-group {
       opacity: 0;
+      pointer-events: none;
     }
 
     .controls-handle {
@@ -142,6 +147,7 @@
       align-items: center;
       justify-content: center;
       transition: all 0.3s ease;
+      z-index: 11;
     }
 
     .controls-handle:hover {
