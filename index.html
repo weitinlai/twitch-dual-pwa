@@ -437,12 +437,8 @@
     let ch2 = localStorage.getItem('channel2') || "lofi_girl";
     
     // 播放模式設定
-    let mode1 = localStorage.getItem('mode1') || 'auto'; // auto, live, vod
+    let mode1 = localStorage.getItem('mode1') || 'auto'; // auto, live
     let mode2 = localStorage.getItem('mode2') || 'auto';
-    
-    // 錄影影片資訊
-    let vod1 = localStorage.getItem('vod1') || '';
-    let vod2 = localStorage.getItem('vod2') || '';
 
     function showLoading() {
       const loading = document.createElement('div');
@@ -465,25 +461,12 @@
       return true;
     }
 
-    // 獲取頻道最新錄影 (簡化版本)
-    async function getLatestVod(channel) {
-      // 由於 API 限制，我們使用一個通用的方法
-      // 實際使用時，用戶可以從 Twitch 頻道頁面複製 VOD ID
-      console.log(`嘗試獲取 ${channel} 的最新錄影...`);
-      
-      // 返回 null，讓用戶知道需要手動處理
-      return null;
-    }
+
 
     // 生成播放器 URL
-    function generatePlayerUrl(channel, mode, vodId = '') {
+    function generatePlayerUrl(channel, mode) {
       const parent = location.hostname;
-      
-      if (mode === 'vod' && vodId) {
-        return `https://player.twitch.tv/?video=${vodId}&parent=${parent}`;
-      } else {
-        return `https://player.twitch.tv/?channel=${channel}&parent=${parent}`;
-      }
+      return `https://player.twitch.tv/?channel=${channel}&parent=${parent}`;
     }
 
     // 更新模式按鈕狀態
@@ -491,14 +474,14 @@
       // 更新主畫面模式按鈕
       const mainButtons = document.querySelectorAll('#mode-selector-main .mode-button');
       mainButtons.forEach((btn, index) => {
-        const modes = ['auto', 'live', 'vod'];
+        const modes = ['auto', 'live'];
         btn.classList.toggle('active', modes[index] === mode1);
       });
 
       // 更新小畫面模式按鈕
       const pipButtons = document.querySelectorAll('#mode-selector-pip .mode-button');
       pipButtons.forEach((btn, index) => {
-        const modes = ['auto', 'live', 'vod'];
+        const modes = ['auto', 'live'];
         btn.classList.toggle('active', modes[index] === mode2);
       });
     }
@@ -516,47 +499,17 @@
           checkChannelStatus(ch2)
         ]);
 
-        // 決定播放模式
-        const finalMode1 = mode1 === 'auto' ? (isLive1 ? 'live' : 'vod') : mode1;
-        const finalMode2 = mode2 === 'auto' ? (isLive2 ? 'live' : 'vod') : mode2;
-
-        // 如果是錄影模式，嘗試獲取最新錄影
-        let vodInfo1 = null, vodInfo2 = null;
-        if (finalMode1 === 'vod') {
-          vodInfo1 = await getLatestVod(ch1);
-          if (!vodInfo1) {
-            // 如果無法獲取，回退到直播模式
-            finalMode1 = 'live';
-            console.log(`無法獲取 ${ch1} 的錄影，回退到直播模式`);
-          } else {
-            localStorage.setItem('vod1', vodInfo1.id);
-            localStorage.setItem('vod1_title', vodInfo1.title);
-          }
-        }
-        if (finalMode2 === 'vod') {
-          vodInfo2 = await getLatestVod(ch2);
-          if (!vodInfo2) {
-            // 如果無法獲取，回退到直播模式
-            finalMode2 = 'live';
-            console.log(`無法獲取 ${ch2} 的錄影，回退到直播模式`);
-          } else {
-            localStorage.setItem('vod2', vodInfo2.id);
-            localStorage.setItem('vod2_title', vodInfo2.title);
-          }
-        }
+        // 決定播放模式 (只支援直播)
+        const finalMode1 = 'live';
+        const finalMode2 = 'live';
 
         // 載入播放器
         setTimeout(() => {
-          document.getElementById("main").src = generatePlayerUrl(ch1, finalMode1, vodInfo1?.id);
-          document.getElementById("pip").src = generatePlayerUrl(ch2, finalMode2, vodInfo2?.id);
+          document.getElementById("main").src = generatePlayerUrl(ch1, finalMode1);
+          document.getElementById("pip").src = generatePlayerUrl(ch2, finalMode2);
           
-          // 聊天室只顯示主畫面的
-          const chatChannel = finalMode1 === 'live' ? ch1 : '';
-          if (chatChannel) {
-            document.getElementById("chat").src = `https://www.twitch.tv/embed/${chatChannel}/chat?parent=${parent}`;
-          } else {
-            document.getElementById("chat").src = '';
-          }
+          // 聊天室顯示主畫面的
+          document.getElementById("chat").src = `https://www.twitch.tv/embed/${ch1}/chat?parent=${parent}`;
           
           document.getElementById("ch1").value = ch1;
           document.getElementById("ch2").value = ch2;
@@ -673,7 +626,6 @@
             <div class="mode-selector" id="mode-selector-main">
               <button class="mode-button" onclick="updateMode('main', 'auto')">自動</button>
               <button class="mode-button" onclick="updateMode('main', 'live')">直播</button>
-              <button class="mode-button" onclick="updateMode('main', 'vod')">最新錄影</button>
             </div>
 
           </div>
@@ -684,7 +636,6 @@
             <div class="mode-selector" id="mode-selector-pip">
               <button class="mode-button" onclick="updateMode('pip', 'auto')">自動</button>
               <button class="mode-button" onclick="updateMode('pip', 'live')">直播</button>
-              <button class="mode-button" onclick="updateMode('pip', 'vod')">最新錄影</button>
             </div>
 
           </div>
