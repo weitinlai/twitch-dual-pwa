@@ -163,60 +163,7 @@
       color: white;
     }
 
-    .video-info {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      z-index: 10;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(20px);
-      padding: 12px 16px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.8);
-      max-width: 300px;
-    }
 
-    .video-info.live {
-      border-left: 4px solid #ff4444;
-    }
-
-    .video-info.vod {
-      border-left: 4px solid #9146FF;
-    }
-
-    .video-info h4 {
-      margin: 0 0 4px 0;
-      font-size: 14px;
-      font-weight: 600;
-      color: white;
-    }
-
-    .video-info p {
-      margin: 0;
-      line-height: 1.4;
-    }
-
-    .status-badge {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-      margin-left: 8px;
-    }
-
-    .status-badge.live {
-      background: #ff4444;
-      color: white;
-    }
-
-    .status-badge.vod {
-      background: #9146FF;
-      color: white;
-    }
 
     .control-label {
       font-size: 12px;
@@ -556,23 +503,7 @@
       });
     }
 
-    // 更新影片資訊顯示
-    function updateVideoInfo(playerId, channel, mode, isLive = false, vodTitle = '') {
-      const videoInfo = document.getElementById(`video-info-${playerId}`);
-      if (!videoInfo) return;
 
-      const statusBadge = isLive ? 
-        '<span class="status-badge live">直播中</span>' : 
-        '<span class="status-badge vod">最新錄影</span>';
-      
-      const title = isLive ? `${channel} 直播中` : (vodTitle || `${channel} 最新錄影`);
-      
-      videoInfo.className = `video-info ${isLive ? 'live' : 'vod'}`;
-      videoInfo.innerHTML = `
-        <h4>${title} ${statusBadge}</h4>
-        <p>模式: ${mode === 'auto' ? '自動' : mode === 'live' ? '直播' : '最新錄影'}</p>
-      `;
-    }
 
     async function loadPlayers() {
       showLoading();
@@ -633,9 +564,7 @@
           // 更新模式按鈕狀態
           updateModeButtons();
           
-          // 更新影片資訊
-          updateVideoInfo('main', ch1, finalMode1, isLive1, vodInfo1?.title);
-          updateVideoInfo('pip', ch2, finalMode2, isLive2, vodInfo2?.title);
+
           
           // 隱藏載入動畫
           setTimeout(hideLoading, 1000);
@@ -772,9 +701,7 @@
 
 
 
-      <!-- 影片資訊顯示 -->
-      <div id="video-info-main" class="video-info"></div>
-      <div id="video-info-pip" class="video-info" style="bottom: 50%; right: 20px; left: auto;"></div>
+
     </div>
   
   <div class="chat-area">
