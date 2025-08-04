@@ -74,14 +74,19 @@
         0 8px 32px rgba(0, 0, 0, 0.4),
         0 0 0 1px rgba(255, 255, 255, 0.1);
       z-index: 2;
-      cursor: move;
+      cursor: grab;
       transition: all 0.3s ease;
       position: absolute;
       user-select: none;
-      touch-action: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
       -webkit-tap-highlight-color: transparent;
+      /* HTML5 Drag & Drop 支援 */
+      draggable: true;
+    }
+
+    .pip-player:active {
+      cursor: grabbing;
     }
 
     .pip-player.dragging {
@@ -90,8 +95,9 @@
       box-shadow: 
         0 12px 40px rgba(0, 0, 0, 0.6),
         0 0 0 2px rgba(59, 130, 246, 0.5);
-      transform: scale(1.05);
+      transform: scale(1.05) rotate(2deg);
       z-index: 1000;
+      opacity: 0.8;
     }
 
     .pip-player:hover {
@@ -118,6 +124,23 @@
           0 12px 40px rgba(0, 0, 0, 0.6),
           0 0 0 2px rgba(59, 130, 246, 0.8);
       }
+    }
+
+    /* 防止拖拽時的選中文字 */
+    .video-area {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    /* 拖拽時的全局樣式 */
+    body.dragging {
+      cursor: grabbing !important;
+    }
+
+    body.dragging * {
+      cursor: grabbing !important;
     }
 
     .chat-area {
@@ -494,98 +517,68 @@
 
 
 
-    // iPhone 專用拖拽功能
+    // HTML5 Drag & Drop 功能
     let isDragging = false;
-    let startX = 0;
-    let startY = 0;
-    let startLeft = 0;
-    let startTop = 0;
-    let moveDistance = 0;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
     let longPressTimer = null;
-    let dragStartTime = 0;
 
-    function setupPipClick() {
-      const pip = document.getElementById('pip');
-      
-      // 觸控事件處理
-      pip.addEventListener('touchstart', handleTouchStart, { passive: false });
-      document.addEventListener('touchmove', handleTouchMove, { passive: false });
-      document.addEventListener('touchend', handleTouchEnd, { passive: false });
-      
-      // 防止預設行為
-      pip.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
-      
-      // 長按切換功能
-      pip.addEventListener('touchstart', function(e) {
-        dragStartTime = Date.now();
-        longPressTimer = setTimeout(() => {
-          if (!isDragging) {
-            // 長按視覺反饋
-            pip.classList.add('drag-hint');
-            setTimeout(() => {
-              pip.classList.remove('drag-hint');
-              swapPlayers();
-            }, 200);
-          }
-        }, 600); // 600ms 長按
-      });
-      
-      pip.addEventListener('touchend', function() {
-        if (longPressTimer) {
-          clearTimeout(longPressTimer);
-          longPressTimer = null;
-        }
-        pip.classList.remove('drag-hint');
-      });
-    }
-
-    function handleTouchStart(e) {
-      const touch = e.touches[0];
-      const pip = document.getElementById('pip');
-      const rect = pip.getBoundingClientRect();
-      
-      startX = touch.clientX;
-      startY = touch.clientY;
-      startLeft = rect.left;
-      startTop = rect.top;
-      moveDistance = 0;
-      
-      // 清除長按計時器
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-      
-      pip.classList.add('dragging');
-      e.preventDefault();
-    }
-
-    function handleTouchMove(e) {
-      if (e.touches.length !== 1) return;
-      
-      const touch = e.touches[0];
+    function setupPipDrag() {
       const pip = document.getElementById('pip');
       const videoArea = document.querySelector('.video-area');
-      const videoRect = videoArea.getBoundingClientRect();
       
-      // 計算移動距離
-      const deltaX = touch.clientX - startX;
-      const deltaY = touch.clientY - startY;
-      moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+             // 拖拽開始
+       pip.addEventListener('dragstart', function(e) {
+         isDragging = true;
+         const rect = pip.getBoundingClientRect();
+         dragOffsetX = e.clientX - rect.left;
+         dragOffsetY = e.clientY - rect.top;
+         
+         pip.classList.add('dragging');
+         document.body.classList.add('dragging');
+         
+         // 設置拖拽圖像（透明）
+         const dragImage = new Image();
+         dragImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
+         e.dataTransfer.setDragImage(dragImage, 0, 0);
+         e.dataTransfer.effectAllowed = 'move';
+         
+         // 清除長按計時器
+         if (longPressTimer) {
+           clearTimeout(longPressTimer);
+           longPressTimer = null;
+         }
+       });
       
-      // 如果移動距離超過閾值，開始拖拽
-      if (moveDistance > 15) {
-        isDragging = true;
-        // 清除長按計時器
-        if (longPressTimer) {
-          clearTimeout(longPressTimer);
-          longPressTimer = null;
-        }
-      }
+             // 拖拽結束
+       pip.addEventListener('dragend', function(e) {
+         isDragging = false;
+         pip.classList.remove('dragging');
+         document.body.classList.remove('dragging');
+         
+         // 儲存位置
+         const left = pip.style.left;
+         const top = pip.style.top;
+         if (left && top) {
+           localStorage.setItem('pipPosition', JSON.stringify({ left, top }));
+         }
+         
+         // 添加完成動畫
+         pip.style.transition = 'transform 0.2s ease';
+         pip.style.transform = 'scale(1.02)';
+         setTimeout(() => {
+           pip.style.transform = 'scale(1)';
+           pip.style.transition = '';
+         }, 200);
+       });
       
-      if (isDragging) {
-        let newLeft = startLeft + deltaX;
-        let newTop = startTop + deltaY;
+      // 拖拽中
+      pip.addEventListener('drag', function(e) {
+        if (!isDragging || !e.clientX || !e.clientY) return;
+        
+        const videoRect = videoArea.getBoundingClientRect();
+        let newLeft = e.clientX - dragOffsetX - videoRect.left;
+        let newTop = e.clientY - dragOffsetY - videoRect.top;
         
         // 限制在視窗範圍內，留一些邊距
         const margin = 10;
@@ -599,42 +592,50 @@
         pip.style.top = newTop + 'px';
         pip.style.right = 'auto';
         pip.style.bottom = 'auto';
-      }
+      });
       
-      e.preventDefault();
-    }
-
-    function handleTouchEnd(e) {
-      const touchDuration = Date.now() - dragStartTime;
+      // 長按切換功能（使用滑鼠事件）
+      let mouseDownTimer;
+      pip.addEventListener('mousedown', function(e) {
+        mouseDownTimer = setTimeout(() => {
+          if (!isDragging) {
+            pip.classList.add('drag-hint');
+            setTimeout(() => {
+              pip.classList.remove('drag-hint');
+              swapPlayers();
+            }, 200);
+          }
+        }, 600);
+      });
       
-      if (isDragging) {
-        // 儲存位置
-        const pip = document.getElementById('pip');
-        const left = pip.style.left;
-        const top = pip.style.top;
-        if (left && top) {
-          localStorage.setItem('pipPosition', JSON.stringify({ left, top }));
+      pip.addEventListener('mouseup', function() {
+        if (mouseDownTimer) {
+          clearTimeout(mouseDownTimer);
+          mouseDownTimer = null;
         }
-        
-        // 添加完成動畫
-        pip.style.transition = 'transform 0.2s ease';
-        pip.style.transform = 'scale(1.02)';
-        setTimeout(() => {
-          pip.style.transform = 'scale(1)';
-          pip.style.transition = '';
-        }, 200);
-      } else if (touchDuration < 200 && moveDistance < 10) {
-        // 短按且移動距離小，可能是點擊
-        // 這裡可以添加點擊功能
-      }
+        pip.classList.remove('drag-hint');
+      });
       
-      isDragging = false;
-      moveDistance = 0;
-      const pip = document.getElementById('pip');
-      pip.classList.remove('dragging');
-      pip.classList.remove('drag-hint');
+      // 觸控長按功能（備用）
+      pip.addEventListener('touchstart', function(e) {
+        longPressTimer = setTimeout(() => {
+          if (!isDragging) {
+            pip.classList.add('drag-hint');
+            setTimeout(() => {
+              pip.classList.remove('drag-hint');
+              swapPlayers();
+            }, 200);
+          }
+        }, 600);
+      });
       
-      e.preventDefault();
+      pip.addEventListener('touchend', function() {
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+        pip.classList.remove('drag-hint');
+      });
     }
 
     // 鍵盤快捷鍵
@@ -659,7 +660,7 @@
 
         window.onload = function() {
       loadPlayers();
-      setupPipClick();
+      setupPipDrag();
       setupDoubleTapReset();
       setupKeyboardShortcuts();
       
@@ -709,7 +710,9 @@
     function setupDoubleTapReset() {
       const pip = document.getElementById('pip');
       let lastTap = 0;
+      let lastClick = 0;
       
+      // 觸控雙擊
       pip.addEventListener('touchend', function(e) {
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
@@ -720,6 +723,14 @@
           e.preventDefault();
         }
         lastTap = currentTime;
+      });
+      
+      // 滑鼠雙擊
+      pip.addEventListener('dblclick', function(e) {
+        if (!isDragging) {
+          resetPipPosition();
+          e.preventDefault();
+        }
       });
     }
 
@@ -743,7 +754,7 @@
       
       <div class="swap-button" onclick="swapPlayers()" title="切換主畫面"></div>
       
-      <div class="pip-hint" id="pip-hint">拖拽移動 • 長按切換 • 雙擊重置</div>
+      <div class="pip-hint" id="pip-hint">拖拽移動 • 長按切換 • 雙擊重置位置</div>
 
 
 
