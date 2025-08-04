@@ -2,11 +2,11 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open('twitch-pwa').then(cache => {
       return cache.addAll([
-        '/',
-        '/index.html',
-        '/manifest.json',
-        '/icon-192.png',
-        '/icon-512.png'
+        '/twitch-dual-pwa/',
+        '/twitch-dual-pwa/index.html',
+        '/twitch-dual-pwa/manifest.json',
+        '/twitch-dual-pwa/icon-192.png',
+        '/twitch-dual-pwa/icon-512.png'
       ]);
     })
   );

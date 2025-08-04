@@ -1,7 +1,8 @@
 {
   "name": "Twitch Dual Viewer",
   "short_name": "Twitch2",
-  "start_url": "/",
+  "start_url": "/twitch-dual-pwa/",
+  "scope": "/twitch-dual-pwa/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
