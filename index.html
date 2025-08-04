@@ -74,8 +74,19 @@
         0 8px 32px rgba(0, 0, 0, 0.4),
         0 0 0 1px rgba(255, 255, 255, 0.1);
       z-index: 2;
-      cursor: pointer;
+      cursor: move;
       transition: all 0.3s ease;
+      position: absolute;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .pip-player.dragging {
+      transition: none;
+      border-color: #9146FF;
+      box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.6),
+        0 0 0 2px rgba(145, 70, 255, 0.5);
     }
 
     .pip-player:hover {
@@ -425,9 +436,128 @@
 
 
 
+    // 拖拽功能變數
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let initialLeft = 0;
+    let initialTop = 0;
+
     // 點擊 PiP 播放器切換主畫面
     function setupPipClick() {
-      document.getElementById('pip').addEventListener('click', swapPlayers);
+      const pip = document.getElementById('pip');
+      
+      // 點擊切換功能
+      pip.addEventListener('click', function(e) {
+        if (!isDragging) {
+          swapPlayers();
+        }
+      });
+
+      // 滑鼠拖拽功能
+      pip.addEventListener('mousedown', startDrag);
+      document.addEventListener('mousemove', drag);
+      document.addEventListener('mouseup', endDrag);
+
+      // 觸控拖拽功能
+      pip.addEventListener('touchstart', startDragTouch);
+      document.addEventListener('touchmove', dragTouch);
+      document.addEventListener('touchend', endDrag);
+    }
+
+    function startDrag(e) {
+      isDragging = true;
+      const pip = document.getElementById('pip');
+      const rect = pip.getBoundingClientRect();
+      
+      dragStartX = e.clientX - rect.left;
+      dragStartY = e.clientY - rect.top;
+      
+      initialLeft = rect.left;
+      initialTop = rect.top;
+      
+      pip.classList.add('dragging');
+      e.preventDefault();
+    }
+
+    function startDragTouch(e) {
+      isDragging = true;
+      const pip = document.getElementById('pip');
+      const rect = pip.getBoundingClientRect();
+      const touch = e.touches[0];
+      
+      dragStartX = touch.clientX - rect.left;
+      dragStartY = touch.clientY - rect.top;
+      
+      initialLeft = rect.left;
+      initialTop = rect.top;
+      
+      pip.classList.add('dragging');
+      e.preventDefault();
+    }
+
+    function drag(e) {
+      if (!isDragging) return;
+      
+      const pip = document.getElementById('pip');
+      const videoArea = document.querySelector('.video-area');
+      const videoRect = videoArea.getBoundingClientRect();
+      
+      let newLeft = e.clientX - dragStartX;
+      let newTop = e.clientY - dragStartY;
+      
+      // 限制在視窗範圍內
+      const maxLeft = videoRect.width - pip.offsetWidth;
+      const maxTop = videoRect.height - pip.offsetHeight;
+      
+      newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+      newTop = Math.max(0, Math.min(newTop, maxTop));
+      
+      pip.style.left = newLeft + 'px';
+      pip.style.top = newTop + 'px';
+      pip.style.right = 'auto';
+      pip.style.bottom = 'auto';
+    }
+
+    function dragTouch(e) {
+      if (!isDragging) return;
+      
+      const pip = document.getElementById('pip');
+      const videoArea = document.querySelector('.video-area');
+      const videoRect = videoArea.getBoundingClientRect();
+      const touch = e.touches[0];
+      
+      let newLeft = touch.clientX - dragStartX;
+      let newTop = touch.clientY - dragStartY;
+      
+      // 限制在視窗範圍內
+      const maxLeft = videoRect.width - pip.offsetWidth;
+      const maxTop = videoRect.height - pip.offsetHeight;
+      
+      newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+      newTop = Math.max(0, Math.min(newTop, maxTop));
+      
+      pip.style.left = newLeft + 'px';
+      pip.style.top = newTop + 'px';
+      pip.style.right = 'auto';
+      pip.style.bottom = 'auto';
+      
+      e.preventDefault();
+    }
+
+    function endDrag() {
+      if (!isDragging) return;
+      
+      isDragging = false;
+      const pip = document.getElementById('pip');
+      pip.classList.remove('dragging');
+      
+      // 儲存位置到 localStorage
+      const left = pip.style.left;
+      const top = pip.style.top;
+      if (left && top) {
+        localStorage.setItem('pipPosition', JSON.stringify({ left, top }));
+      }
     }
 
     // 鍵盤快捷鍵
@@ -450,10 +580,13 @@
       });
     }
 
-    window.onload = function() {
+        window.onload = function() {
       loadPlayers();
       setupPipClick();
       setupKeyboardShortcuts();
+      
+      // 恢復小畫面位置
+      restorePipPosition();
       
       // 自動偵測 iOS Safari，第一次進入顯示提示
       const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -461,6 +594,23 @@
       if (isIOS && !isInStandalone && !localStorage.getItem('installPromptShown')) {
         setTimeout(showInstallGuide, 2000);
         localStorage.setItem('installPromptShown', '1');
+      }
+    }
+
+    function restorePipPosition() {
+      const pip = document.getElementById('pip');
+      const savedPosition = localStorage.getItem('pipPosition');
+      
+      if (savedPosition) {
+        try {
+          const position = JSON.parse(savedPosition);
+          pip.style.left = position.left;
+          pip.style.top = position.top;
+          pip.style.right = 'auto';
+          pip.style.bottom = 'auto';
+        } catch (e) {
+          console.log('無法恢復小畫面位置');
+        }
       }
     }
   </script>
