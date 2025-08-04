@@ -81,8 +81,6 @@
       -webkit-user-select: none;
       -webkit-touch-callout: none;
       -webkit-tap-highlight-color: transparent;
-      /* HTML5 Drag & Drop 支援 */
-      draggable: true;
     }
 
     .pip-player:active {
@@ -778,7 +776,7 @@
 <body>
       <div class="video-area">
       <iframe id="main" class="main-player" allowfullscreen></iframe>
-      <iframe id="pip" class="pip-player" allowfullscreen></iframe>
+      <iframe id="pip" class="pip-player" draggable="true" allowfullscreen></iframe>
       
       <div class="swap-button" onclick="swapPlayers()" title="切換主畫面"></div>
       
