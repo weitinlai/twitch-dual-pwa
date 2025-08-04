@@ -277,7 +277,7 @@
 
     #install-guide button {
       margin-top: 24px;
-      padding: 12px 24px;
+      padding: 16px 32px;
       background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
       color: white;
       border: none;
@@ -286,11 +286,20 @@
       font-weight: 500;
       cursor: pointer;
       transition: all 0.3s ease;
+      min-height: 48px;
+      min-width: 120px;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
     #install-guide button:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 25px rgba(145, 70, 255, 0.4);
+    }
+
+    #install-guide button:active {
+      transform: translateY(0);
+      box-shadow: 0 4px 12px rgba(145, 70, 255, 0.3);
     }
 
     #install-guide img {
@@ -515,6 +524,24 @@
       document.getElementById('install-guide').style.display = 'none';
     }
 
+    function setupInstallGuide() {
+      const closeButton = document.getElementById('install-guide-close');
+      if (closeButton) {
+        closeButton.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          hideInstallGuide();
+        });
+        
+        // 也支援觸控事件
+        closeButton.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          hideInstallGuide();
+        });
+      }
+    }
+
 
 
     // HTML5 Drag & Drop 功能
@@ -663,6 +690,7 @@
       setupPipDrag();
       setupDoubleTapReset();
       setupKeyboardShortcuts();
+      setupInstallGuide();
       
       // 恢復小畫面位置
       restorePipPosition();
@@ -773,7 +801,7 @@
       <p>2. 往下滑並選擇 <strong>加入主畫面</strong></p>
       <p>3. 點 <strong>加入</strong> 完成安裝</p>
       <img src="icon-512.png" alt="安裝教學">
-      <button onclick="hideInstallGuide()">我知道了</button>
+      <button id="install-guide-close">我知道了</button>
     </div>
   </div>
 </body>
