@@ -115,7 +115,7 @@
       border-radius: 16px;
       border: 1px solid rgba(255, 255, 255, 0.1);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      min-width: 280px;
+      min-width: 320px;
       transition: all 0.3s ease;
     }
 
@@ -131,6 +131,91 @@
 
     .control-group:last-child {
       margin-bottom: 0;
+    }
+
+    .mode-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .mode-button {
+      flex: 1;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .mode-button.active {
+      background: linear-gradient(135deg, #9146FF 0%, #7c3aed 100%);
+      border-color: #9146FF;
+      color: white;
+    }
+
+    .mode-button:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+    }
+
+    .video-info {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(20px);
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.8);
+      max-width: 300px;
+    }
+
+    .video-info.live {
+      border-left: 4px solid #ff4444;
+    }
+
+    .video-info.vod {
+      border-left: 4px solid #9146FF;
+    }
+
+    .video-info h4 {
+      margin: 0 0 4px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .video-info p {
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-left: 8px;
+    }
+
+    .status-badge.live {
+      background: #ff4444;
+      color: white;
+    }
+
+    .status-badge.vod {
+      background: #9146FF;
+      color: white;
     }
 
     .control-label {
@@ -437,6 +522,14 @@
 
     let ch1 = localStorage.getItem('channel1') || "monstercat";
     let ch2 = localStorage.getItem('channel2') || "lofi_girl";
+    
+    // 播放模式設定
+    let mode1 = localStorage.getItem('mode1') || 'auto'; // auto, live, vod
+    let mode2 = localStorage.getItem('mode2') || 'auto';
+    
+    // 錄影影片資訊
+    let vod1 = localStorage.getItem('vod1') || '';
+    let vod2 = localStorage.getItem('vod2') || '';
 
     function showLoading() {
       const loading = document.createElement('div');
@@ -452,24 +545,123 @@
       }
     }
 
-    function loadPlayers() {
+    // 檢查頻道是否正在直播 (簡化版本)
+    async function checkChannelStatus(channel) {
+      // 由於 API 限制，我們假設所有頻道都有直播
+      // 用戶可以手動切換到錄影模式
+      return true;
+    }
+
+    // 獲取頻道最新錄影 (簡化版本)
+    async function getLatestVod(channel) {
+      // 返回一個示例 VOD ID，實際使用時需要真實的 VOD ID
+      // 用戶可以手動輸入 VOD ID
+      return null;
+    }
+
+    // 生成播放器 URL
+    function generatePlayerUrl(channel, mode, vodId = '') {
+      const parent = location.hostname;
+      
+      if (mode === 'vod' && vodId) {
+        return `https://player.twitch.tv/?video=${vodId}&parent=${parent}`;
+      } else {
+        return `https://player.twitch.tv/?channel=${channel}&parent=${parent}`;
+      }
+    }
+
+    // 更新模式按鈕狀態
+    function updateModeButtons() {
+      // 更新主畫面模式按鈕
+      const mainButtons = document.querySelectorAll('#mode-selector-main .mode-button');
+      mainButtons.forEach((btn, index) => {
+        const modes = ['auto', 'live', 'vod'];
+        btn.classList.toggle('active', modes[index] === mode1);
+      });
+
+      // 更新小畫面模式按鈕
+      const pipButtons = document.querySelectorAll('#mode-selector-pip .mode-button');
+      pipButtons.forEach((btn, index) => {
+        const modes = ['auto', 'live', 'vod'];
+        btn.classList.toggle('active', modes[index] === mode2);
+      });
+    }
+
+    // 更新影片資訊顯示
+    function updateVideoInfo(playerId, channel, mode, isLive = false, vodTitle = '') {
+      const videoInfo = document.getElementById(`video-info-${playerId}`);
+      if (!videoInfo) return;
+
+      const statusBadge = isLive ? 
+        '<span class="status-badge live">直播中</span>' : 
+        '<span class="status-badge vod">錄影</span>';
+      
+      const title = isLive ? `${channel} 直播中` : (vodTitle || `${channel} 錄影`);
+      
+      videoInfo.className = `video-info ${isLive ? 'live' : 'vod'}`;
+      videoInfo.innerHTML = `
+        <h4>${title} ${statusBadge}</h4>
+        <p>模式: ${mode === 'auto' ? '自動' : mode === 'live' ? '直播' : '錄影'}</p>
+      `;
+    }
+
+    async function loadPlayers() {
       showLoading();
       const parent = location.hostname;
       
-      // 添加載入延遲以顯示動畫
-      setTimeout(() => {
-        document.getElementById("main").src =
-          `https://player.twitch.tv/?channel=${ch1}&parent=${parent}`;
-        document.getElementById("pip").src =
-          `https://player.twitch.tv/?channel=${ch2}&parent=${parent}`;
-        document.getElementById("chat").src =
-          `https://www.twitch.tv/embed/${ch1}/chat?parent=${parent}`;
-        document.getElementById("ch1").value = ch1;
-        document.getElementById("ch2").value = ch2;
+      try {
+        // 檢查頻道狀態
+        const [isLive1, isLive2] = await Promise.all([
+          checkChannelStatus(ch1),
+          checkChannelStatus(ch2)
+        ]);
+
+        // 決定播放模式
+        const finalMode1 = mode1 === 'auto' ? (isLive1 ? 'live' : 'vod') : mode1;
+        const finalMode2 = mode2 === 'auto' ? (isLive2 ? 'live' : 'vod') : mode2;
+
+        // 如果是錄影模式且沒有 VOD ID，嘗試獲取
+        let vodId1 = vod1, vodId2 = vod2;
+        if (finalMode1 === 'vod' && !vodId1) {
+          vodId1 = await getLatestVod(ch1);
+          if (vodId1) localStorage.setItem('vod1', vodId1);
+        }
+        if (finalMode2 === 'vod' && !vodId2) {
+          vodId2 = await getLatestVod(ch2);
+          if (vodId2) localStorage.setItem('vod2', vodId2);
+        }
+
+        // 載入播放器
+        setTimeout(() => {
+          document.getElementById("main").src = generatePlayerUrl(ch1, finalMode1, vodId1);
+          document.getElementById("pip").src = generatePlayerUrl(ch2, finalMode2, vodId2);
+          
+          // 聊天室只顯示主畫面的
+          const chatChannel = finalMode1 === 'live' ? ch1 : '';
+          if (chatChannel) {
+            document.getElementById("chat").src = `https://www.twitch.tv/embed/${chatChannel}/chat?parent=${parent}`;
+          } else {
+            document.getElementById("chat").src = '';
+          }
+          
+          document.getElementById("ch1").value = ch1;
+          document.getElementById("ch2").value = ch2;
+          
+          // 更新模式按鈕狀態
+          updateModeButtons();
+          
+          // 更新影片資訊
+          updateVideoInfo('main', ch1, finalMode1, isLive1);
+          updateVideoInfo('pip', ch2, finalMode2, isLive2);
+          
+          // 隱藏載入動畫
+          setTimeout(hideLoading, 1000);
+        }, 500);
         
-        // 隱藏載入動畫
-        setTimeout(hideLoading, 1000);
-      }, 500);
+      } catch (error) {
+        console.error('載入播放器失敗:', error);
+        hideLoading();
+      }
     }
 
     function swapPlayers() {
@@ -488,7 +680,37 @@
     function updateChannels() {
       ch1 = getChannelName(document.getElementById('ch1').value);
       ch2 = getChannelName(document.getElementById('ch2').value);
+      
+      // 更新 VOD ID
+      vod1 = document.getElementById('vod1').value.trim();
+      vod2 = document.getElementById('vod2').value.trim();
+      localStorage.setItem('vod1', vod1);
+      localStorage.setItem('vod2', vod2);
+      
       saveChannels();
+      loadPlayers();
+    }
+
+    function updateMode(player, newMode) {
+      if (player === 'main') {
+        mode1 = newMode;
+        localStorage.setItem('mode1', mode1);
+        // 顯示/隱藏 VOD ID 輸入框
+        const vodInput = document.getElementById('vod1');
+        vodInput.style.display = newMode === 'vod' ? 'block' : 'none';
+        if (newMode === 'vod') {
+          vodInput.value = vod1;
+        }
+      } else {
+        mode2 = newMode;
+        localStorage.setItem('mode2', mode2);
+        // 顯示/隱藏 VOD ID 輸入框
+        const vodInput = document.getElementById('vod2');
+        vodInput.style.display = newMode === 'vod' ? 'block' : 'none';
+        if (newMode === 'vod') {
+          vodInput.value = vod2;
+        }
+      }
       loadPlayers();
     }
 
@@ -529,6 +751,21 @@
     }
 
     window.onload = function() {
+      // 初始化模式按鈕狀態
+      updateModeButtons();
+      
+      // 初始化 VOD ID 輸入框
+      document.getElementById('vod1').value = vod1;
+      document.getElementById('vod2').value = vod2;
+      
+      // 根據當前模式顯示/隱藏 VOD ID 輸入框
+      if (mode1 === 'vod') {
+        document.getElementById('vod1').style.display = 'block';
+      }
+      if (mode2 === 'vod') {
+        document.getElementById('vod2').style.display = 'block';
+      }
+      
       loadPlayers();
       setupPipClick();
       setupKeyboardShortcuts();
@@ -544,36 +781,52 @@
   </script>
 </head>
 <body>
-  <div class="video-area">
-    <iframe id="main" class="main-player" allowfullscreen></iframe>
-    <iframe id="pip" class="pip-player" allowfullscreen></iframe>
-    
-    <div class="controls">
-      <div class="control-group">
-        <div class="control-label">主畫面頻道</div>
-        <input id="ch1" placeholder="輸入 Twitch 頻道名稱" />
-      </div>
+      <div class="video-area">
+      <iframe id="main" class="main-player" allowfullscreen></iframe>
+      <iframe id="pip" class="pip-player" allowfullscreen></iframe>
       
-      <div class="control-group">
-        <div class="control-label">小畫面頻道</div>
-        <input id="ch2" placeholder="輸入 Twitch 頻道名稱" />
+      <div class="controls">
+                  <div class="control-group">
+            <div class="control-label">主畫面頻道</div>
+            <input id="ch1" placeholder="輸入 Twitch 頻道名稱" />
+            <div class="mode-selector" id="mode-selector-main">
+              <button class="mode-button" onclick="updateMode('main', 'auto')">自動</button>
+              <button class="mode-button" onclick="updateMode('main', 'live')">直播</button>
+              <button class="mode-button" onclick="updateMode('main', 'vod')">錄影</button>
+            </div>
+            <input id="vod1" placeholder="錄影 ID (選填)" style="display: none;" />
+          </div>
+        
+                  <div class="control-group">
+            <div class="control-label">小畫面頻道</div>
+            <input id="ch2" placeholder="輸入 Twitch 頻道名稱" />
+            <div class="mode-selector" id="mode-selector-pip">
+              <button class="mode-button" onclick="updateMode('pip', 'auto')">自動</button>
+              <button class="mode-button" onclick="updateMode('pip', 'live')">直播</button>
+              <button class="mode-button" onclick="updateMode('pip', 'vod')">錄影</button>
+            </div>
+            <input id="vod2" placeholder="錄影 ID (選填)" style="display: none;" />
+          </div>
+        
+        <div class="button-group">
+          <button onclick="updateChannels()">載入頻道</button>
+          <button onclick="swapPlayers()" class="secondary">切換主畫面</button>
+        </div>
+        
+        <div class="button-group">
+          <button onclick="showInstallGuide()" class="secondary">安裝 App</button>
+        </div>
       </div>
-      
-      <div class="button-group">
-        <button onclick="updateChannels()">載入頻道</button>
-        <button onclick="swapPlayers()" class="secondary">切換主畫面</button>
-      </div>
-      
-      <div class="button-group">
-        <button onclick="showInstallGuide()" class="secondary">安裝 App</button>
-      </div>
-    </div>
 
-    <div class="status-indicator">
-      <div class="status-dot"></div>
-      <span>雙頻道直播中</span>
+      <div class="status-indicator">
+        <div class="status-dot"></div>
+        <span>雙頻道播放中</span>
+      </div>
+
+      <!-- 影片資訊顯示 -->
+      <div id="video-info-main" class="video-info"></div>
+      <div id="video-info-pip" class="video-info" style="bottom: 50%; right: 20px; left: auto;"></div>
     </div>
-  </div>
   
   <div class="chat-area">
     <iframe id="chat" class="chat"></iframe>
