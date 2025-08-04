@@ -1,6 +1,6 @@
 {
-  "name": "Twitch Dual Viewer",
-  "short_name": "Twitch2",
+  "name": "富邦雙頻道直播",
+  "short_name": "富邦直播",
   "start_url": "/twitch-dual-pwa/",
   "scope": "/twitch-dual-pwa/",
   "display": "standalone",
