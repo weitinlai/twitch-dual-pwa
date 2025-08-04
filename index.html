@@ -143,8 +143,14 @@
 
     /* 放置目標的 hover 效果 */
     .video-area.hover {
-      background: rgba(59, 130, 246, 0.1);
-      border: 2px dashed rgba(59, 130, 246, 0.3);
+      background: rgba(59, 130, 246, 0.05);
+      border: 2px dashed rgba(59, 130, 246, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    /* 拖拽時的容器效果 */
+    .video-area.drag-active {
+      background: rgba(59, 130, 246, 0.02);
     }
 
     .chat-area {
@@ -565,6 +571,7 @@
       // 設置放置目標
       videoArea.addEventListener('dragover', dragover);
       videoArea.addEventListener('dragenter', cancelDefault);
+      videoArea.addEventListener('dragleave', dragLeave);
       videoArea.addEventListener('drop', dropped);
       
       // 長按切換功能
@@ -581,14 +588,16 @@
       e.dataTransfer.setData('text/plain', this.id);
       e.dataTransfer.effectAllowed = 'move';
       
-      // 設置拖拽圖像（透明）
-      const dragImage = new Image();
-      dragImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
-      e.dataTransfer.setDragImage(dragImage, 0, 0);
+      // 設置拖拽圖像（使用元素本身）
+      e.dataTransfer.setDragImage(this, this.offsetWidth / 2, this.offsetHeight / 2);
       
       // 視覺反饋
       this.classList.add('dragging');
       document.body.classList.add('dragging');
+      
+      // 添加容器效果
+      const videoArea = document.querySelector('.video-area');
+      videoArea.classList.add('drag-active');
       
       // 清除長按計時器
       if (longPressTimer) {
@@ -605,6 +614,11 @@
       // 移除視覺反饋
       this.classList.remove('dragging');
       document.body.classList.remove('dragging');
+      
+      // 移除容器效果
+      const videoArea = document.querySelector('.video-area');
+      videoArea.classList.remove('drag-active');
+      videoArea.classList.remove('hover');
       
       // 儲存位置
       const left = this.style.left;
@@ -649,6 +663,9 @@
       pip.style.right = 'auto';
       pip.style.bottom = 'auto';
       
+      // 添加 hover 效果
+      videoArea.classList.add('hover');
+      
       cancelDefault(e);
     }
 
@@ -657,6 +674,14 @@
       
       // 移除 hover 效果
       e.currentTarget.classList.remove('hover');
+    }
+
+    function dragLeave(e) {
+      // 確保只有當真正離開放置區域時才移除 hover 效果
+      if (!e.currentTarget.contains(e.relatedTarget)) {
+        e.currentTarget.classList.remove('hover');
+      }
+      cancelDefault(e);
     }
 
     function setupLongPress(pip) {
