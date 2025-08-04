@@ -117,6 +117,48 @@
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
       min-width: 320px;
       transition: all 0.3s ease;
+      transform: translateY(0);
+    }
+
+    .controls.collapsed {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+
+    .controls-handle {
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .controls-handle:hover {
+      background: rgba(0, 0, 0, 0.9);
+    }
+
+    .controls-handle::before {
+      content: '';
+      width: 20px;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 1px;
+      transition: all 0.3s ease;
+    }
+
+    .controls.collapsed .controls-handle::before {
+      transform: rotate(180deg);
     }
 
     .controls:hover {
@@ -522,6 +564,26 @@
       document.getElementById('install-guide').style.display = 'none';
     }
 
+    // 控制板縮放功能
+    function toggleControls() {
+      const controls = document.getElementById('controls');
+      controls.classList.toggle('collapsed');
+      
+      // 儲存狀態到 localStorage
+      const isCollapsed = controls.classList.contains('collapsed');
+      localStorage.setItem('controlsCollapsed', isCollapsed);
+    }
+
+    // 初始化控制板狀態
+    function initControlsState() {
+      const controls = document.getElementById('controls');
+      const isCollapsed = localStorage.getItem('controlsCollapsed') === 'true';
+      
+      if (isCollapsed) {
+        controls.classList.add('collapsed');
+      }
+    }
+
     // 點擊 PiP 播放器切換主畫面
     function setupPipClick() {
       document.getElementById('pip').addEventListener('click', swapPlayers);
@@ -542,10 +604,17 @@
               break;
           }
         }
+        
+        // 按 H 鍵切換控制板顯示
+        if (e.key === 'h' || e.key === 'H') {
+          e.preventDefault();
+          toggleControls();
+        }
       });
     }
 
     window.onload = function() {
+      initControlsState();
       loadPlayers();
       setupPipClick();
       setupKeyboardShortcuts();
@@ -565,7 +634,7 @@
       <iframe id="main" class="main-player" allowfullscreen></iframe>
       <iframe id="pip" class="pip-player" allowfullscreen></iframe>
       
-      <div class="controls">
+      <div class="controls" id="controls">
                   <div class="control-group">
             <div class="control-label">主畫面頻道</div>
             <input id="ch1" placeholder="輸入 Twitch 頻道名稱" />
@@ -584,6 +653,8 @@
         <div class="button-group">
           <button onclick="showInstallGuide()" class="secondary">安裝 App</button>
         </div>
+        
+        <div class="controls-handle" onclick="toggleControls()"></div>
       </div>
 
 
