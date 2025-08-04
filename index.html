@@ -118,10 +118,13 @@
       min-width: 320px;
       transition: all 0.3s ease;
       transform: translateY(0);
+      max-height: 300px;
+      overflow: hidden;
     }
 
     .controls.collapsed {
-      transform: translateY(-100%);
+      max-height: 0;
+      padding: 0 16px;
     }
 
     .controls.collapsed .control-group,
@@ -457,8 +460,8 @@
       return input.trim();
     }
 
-    let ch1 = localStorage.getItem('channel1') || "monstercat";
-    let ch2 = localStorage.getItem('channel2') || "lofi_girl";
+    let ch1 = localStorage.getItem('channel1') || "fubonguardians_official";
+    let ch2 = localStorage.getItem('channel2') || "fubonangels_official";
     
 
 
