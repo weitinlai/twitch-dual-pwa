@@ -554,8 +554,11 @@
 
     // 獲取頻道最新錄影 (簡化版本)
     async function getLatestVod(channel) {
-      // 返回一個示例 VOD ID，實際使用時需要真實的 VOD ID
-      // 用戶可以手動輸入 VOD ID
+      // 由於 API 限制，我們使用一個通用的方法
+      // 實際使用時，用戶可以從 Twitch 頻道頁面複製 VOD ID
+      console.log(`嘗試獲取 ${channel} 的最新錄影...`);
+      
+      // 返回 null，讓用戶知道需要手動處理
       return null;
     }
 
@@ -594,14 +597,14 @@
 
       const statusBadge = isLive ? 
         '<span class="status-badge live">直播中</span>' : 
-        '<span class="status-badge vod">錄影</span>';
+        '<span class="status-badge vod">最新錄影</span>';
       
-      const title = isLive ? `${channel} 直播中` : (vodTitle || `${channel} 錄影`);
+      const title = isLive ? `${channel} 直播中` : (vodTitle || `${channel} 最新錄影`);
       
       videoInfo.className = `video-info ${isLive ? 'live' : 'vod'}`;
       videoInfo.innerHTML = `
         <h4>${title} ${statusBadge}</h4>
-        <p>模式: ${mode === 'auto' ? '自動' : mode === 'live' ? '直播' : '錄影'}</p>
+        <p>模式: ${mode === 'auto' ? '自動' : mode === 'live' ? '直播' : '最新錄影'}</p>
       `;
     }
 
@@ -620,21 +623,35 @@
         const finalMode1 = mode1 === 'auto' ? (isLive1 ? 'live' : 'vod') : mode1;
         const finalMode2 = mode2 === 'auto' ? (isLive2 ? 'live' : 'vod') : mode2;
 
-        // 如果是錄影模式且沒有 VOD ID，嘗試獲取
-        let vodId1 = vod1, vodId2 = vod2;
-        if (finalMode1 === 'vod' && !vodId1) {
-          vodId1 = await getLatestVod(ch1);
-          if (vodId1) localStorage.setItem('vod1', vodId1);
+        // 如果是錄影模式，嘗試獲取最新錄影
+        let vodInfo1 = null, vodInfo2 = null;
+        if (finalMode1 === 'vod') {
+          vodInfo1 = await getLatestVod(ch1);
+          if (!vodInfo1) {
+            // 如果無法獲取，回退到直播模式
+            finalMode1 = 'live';
+            console.log(`無法獲取 ${ch1} 的錄影，回退到直播模式`);
+          } else {
+            localStorage.setItem('vod1', vodInfo1.id);
+            localStorage.setItem('vod1_title', vodInfo1.title);
+          }
         }
-        if (finalMode2 === 'vod' && !vodId2) {
-          vodId2 = await getLatestVod(ch2);
-          if (vodId2) localStorage.setItem('vod2', vodId2);
+        if (finalMode2 === 'vod') {
+          vodInfo2 = await getLatestVod(ch2);
+          if (!vodInfo2) {
+            // 如果無法獲取，回退到直播模式
+            finalMode2 = 'live';
+            console.log(`無法獲取 ${ch2} 的錄影，回退到直播模式`);
+          } else {
+            localStorage.setItem('vod2', vodInfo2.id);
+            localStorage.setItem('vod2_title', vodInfo2.title);
+          }
         }
 
         // 載入播放器
         setTimeout(() => {
-          document.getElementById("main").src = generatePlayerUrl(ch1, finalMode1, vodId1);
-          document.getElementById("pip").src = generatePlayerUrl(ch2, finalMode2, vodId2);
+          document.getElementById("main").src = generatePlayerUrl(ch1, finalMode1, vodInfo1?.id);
+          document.getElementById("pip").src = generatePlayerUrl(ch2, finalMode2, vodInfo2?.id);
           
           // 聊天室只顯示主畫面的
           const chatChannel = finalMode1 === 'live' ? ch1 : '';
@@ -651,8 +668,8 @@
           updateModeButtons();
           
           // 更新影片資訊
-          updateVideoInfo('main', ch1, finalMode1, isLive1);
-          updateVideoInfo('pip', ch2, finalMode2, isLive2);
+          updateVideoInfo('main', ch1, finalMode1, isLive1, vodInfo1?.title);
+          updateVideoInfo('pip', ch2, finalMode2, isLive2, vodInfo2?.title);
           
           // 隱藏載入動畫
           setTimeout(hideLoading, 1000);
@@ -680,13 +697,6 @@
     function updateChannels() {
       ch1 = getChannelName(document.getElementById('ch1').value);
       ch2 = getChannelName(document.getElementById('ch2').value);
-      
-      // 更新 VOD ID
-      vod1 = document.getElementById('vod1').value.trim();
-      vod2 = document.getElementById('vod2').value.trim();
-      localStorage.setItem('vod1', vod1);
-      localStorage.setItem('vod2', vod2);
-      
       saveChannels();
       loadPlayers();
     }
@@ -695,21 +705,9 @@
       if (player === 'main') {
         mode1 = newMode;
         localStorage.setItem('mode1', mode1);
-        // 顯示/隱藏 VOD ID 輸入框
-        const vodInput = document.getElementById('vod1');
-        vodInput.style.display = newMode === 'vod' ? 'block' : 'none';
-        if (newMode === 'vod') {
-          vodInput.value = vod1;
-        }
       } else {
         mode2 = newMode;
         localStorage.setItem('mode2', mode2);
-        // 顯示/隱藏 VOD ID 輸入框
-        const vodInput = document.getElementById('vod2');
-        vodInput.style.display = newMode === 'vod' ? 'block' : 'none';
-        if (newMode === 'vod') {
-          vodInput.value = vod2;
-        }
       }
       loadPlayers();
     }
@@ -754,18 +752,6 @@
       // 初始化模式按鈕狀態
       updateModeButtons();
       
-      // 初始化 VOD ID 輸入框
-      document.getElementById('vod1').value = vod1;
-      document.getElementById('vod2').value = vod2;
-      
-      // 根據當前模式顯示/隱藏 VOD ID 輸入框
-      if (mode1 === 'vod') {
-        document.getElementById('vod1').style.display = 'block';
-      }
-      if (mode2 === 'vod') {
-        document.getElementById('vod2').style.display = 'block';
-      }
-      
       loadPlayers();
       setupPipClick();
       setupKeyboardShortcuts();
@@ -792,9 +778,9 @@
             <div class="mode-selector" id="mode-selector-main">
               <button class="mode-button" onclick="updateMode('main', 'auto')">自動</button>
               <button class="mode-button" onclick="updateMode('main', 'live')">直播</button>
-              <button class="mode-button" onclick="updateMode('main', 'vod')">錄影</button>
+              <button class="mode-button" onclick="updateMode('main', 'vod')">最新錄影</button>
             </div>
-            <input id="vod1" placeholder="錄影 ID (選填)" style="display: none;" />
+
           </div>
         
                   <div class="control-group">
@@ -803,9 +789,9 @@
             <div class="mode-selector" id="mode-selector-pip">
               <button class="mode-button" onclick="updateMode('pip', 'auto')">自動</button>
               <button class="mode-button" onclick="updateMode('pip', 'live')">直播</button>
-              <button class="mode-button" onclick="updateMode('pip', 'vod')">錄影</button>
+              <button class="mode-button" onclick="updateMode('pip', 'vod')">最新錄影</button>
             </div>
-            <input id="vod2" placeholder="錄影 ID (選填)" style="display: none;" />
+
           </div>
         
         <div class="button-group">
