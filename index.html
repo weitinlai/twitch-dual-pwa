@@ -308,36 +308,7 @@
       box-shadow: 0 8px 25px rgba(255, 255, 255, 0.1);
     }
 
-    .status-indicator {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      z-index: 10;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(20px);
-      padding: 8px 16px;
-      border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      font-size: 12px;
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.8);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
 
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #10b981;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
 
     #install-guide {
       display: none;
@@ -453,12 +424,7 @@
         right: 10px;
       }
       
-      .status-indicator {
-        top: 10px;
-        right: 10px;
-        font-size: 11px;
-        padding: 6px 12px;
-      }
+
     }
 
     @media (max-width: 480px) {
@@ -804,10 +770,7 @@
         </div>
       </div>
 
-      <div class="status-indicator">
-        <div class="status-dot"></div>
-        <span>雙頻道播放中</span>
-      </div>
+
 
       <!-- 影片資訊顯示 -->
       <div id="video-info-main" class="video-info"></div>
