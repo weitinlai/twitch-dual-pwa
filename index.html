@@ -440,41 +440,38 @@
     let isDragging = false;
     let dragStartX = 0;
     let dragStartY = 0;
-    let initialLeft = 0;
-    let initialTop = 0;
+    let dragDistance = 0;
 
     // 點擊 PiP 播放器切換主畫面
     function setupPipClick() {
       const pip = document.getElementById('pip');
       
-      // 點擊切換功能
-      pip.addEventListener('click', function(e) {
-        if (!isDragging) {
-          swapPlayers();
-        }
-      });
+      // 觸控拖拽功能
+      pip.addEventListener('touchstart', startDragTouch, { passive: false });
+      document.addEventListener('touchmove', dragTouch, { passive: false });
+      document.addEventListener('touchend', endDrag);
 
       // 滑鼠拖拽功能
       pip.addEventListener('mousedown', startDrag);
       document.addEventListener('mousemove', drag);
       document.addEventListener('mouseup', endDrag);
 
-      // 觸控拖拽功能
-      pip.addEventListener('touchstart', startDragTouch);
-      document.addEventListener('touchmove', dragTouch);
-      document.addEventListener('touchend', endDrag);
+      // 點擊切換功能
+      pip.addEventListener('click', function(e) {
+        if (dragDistance < 10) { // 只有移動距離很小時才觸發點擊
+          swapPlayers();
+        }
+      });
     }
 
     function startDrag(e) {
       isDragging = true;
+      dragDistance = 0;
       const pip = document.getElementById('pip');
       const rect = pip.getBoundingClientRect();
       
       dragStartX = e.clientX - rect.left;
       dragStartY = e.clientY - rect.top;
-      
-      initialLeft = rect.left;
-      initialTop = rect.top;
       
       pip.classList.add('dragging');
       e.preventDefault();
@@ -482,15 +479,13 @@
 
     function startDragTouch(e) {
       isDragging = true;
+      dragDistance = 0;
       const pip = document.getElementById('pip');
       const rect = pip.getBoundingClientRect();
       const touch = e.touches[0];
       
       dragStartX = touch.clientX - rect.left;
       dragStartY = touch.clientY - rect.top;
-      
-      initialLeft = rect.left;
-      initialTop = rect.top;
       
       pip.classList.add('dragging');
       e.preventDefault();
@@ -505,6 +500,10 @@
       
       let newLeft = e.clientX - dragStartX;
       let newTop = e.clientY - dragStartY;
+      
+      // 計算拖拽距離
+      dragDistance = Math.sqrt(Math.pow(e.clientX - (dragStartX + videoRect.left), 2) + 
+                              Math.pow(e.clientY - (dragStartY + videoRect.top), 2));
       
       // 限制在視窗範圍內
       const maxLeft = videoRect.width - pip.offsetWidth;
@@ -529,6 +528,10 @@
       
       let newLeft = touch.clientX - dragStartX;
       let newTop = touch.clientY - dragStartY;
+      
+      // 計算拖拽距離
+      dragDistance = Math.sqrt(Math.pow(touch.clientX - (dragStartX + videoRect.left), 2) + 
+                              Math.pow(touch.clientY - (dragStartY + videoRect.top), 2));
       
       // 限制在視窗範圍內
       const maxLeft = videoRect.width - pip.offsetWidth;
