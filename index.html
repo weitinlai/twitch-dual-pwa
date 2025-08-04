@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twitch Dual Viewer</title>
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js');
+    }
+
+    function updateChannels() {
+      const ch1 = document.getElementById('ch1').value.trim();
+      const ch2 = document.getElementById('ch2').value.trim();
+      if (ch1 && ch2) {
+        localStorage.setItem('channel1', ch1);
+        localStorage.setItem('channel2', ch2);
+        loadChannels();
+      }
+    }
+
+    function loadChannels() {
+      const ch1 = localStorage.getItem('channel1') || 'CHANNEL_ONE';
+      const ch2 = localStorage.getItem('channel2') || 'CHANNEL_TWO';
+      const parent = location.hostname;
+      document.getElementById('frame1').src = `https://player.twitch.tv/?channel=${ch1}&parent=${parent}`;
+      document.getElementById('frame2').src = `https://player.twitch.tv/?channel=${ch2}&parent=${parent}`;
+      document.getElementById('ch1').value = ch1;
+      document.getElementById('ch2').value = ch2;
+    }
+
+    window.onload = loadChannels;
+  </script>
+  <style>
+    body { margin: 0; background: black; display: flex; flex-direction: column; }
+    .controls { padding: 5px; background: #222; display: flex; gap: 5px; }
+    .controls input { flex: 1; padding: 5px; }
+    iframe { border: none; flex: 1; height: 50vh; }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <input id="ch1" placeholder="Channel 1 name" />
+    <input id="ch2" placeholder="Channel 2 name" />
+    <button onclick="updateChannels()">Load</button>
+  </div>
+  <iframe id="frame1" allowfullscreen></iframe>
+  <iframe id="frame2" allowfullscreen></iframe>
+</body>
+</html>
