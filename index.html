@@ -133,35 +133,7 @@
       margin-bottom: 0;
     }
 
-    .mode-selector {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
 
-    .mode-button {
-      flex: 1;
-      padding: 8px 12px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 6px;
-      color: rgba(255, 255, 255, 0.7);
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .mode-button.active {
-      background: linear-gradient(135deg, #9146FF 0%, #7c3aed 100%);
-      border-color: #9146FF;
-      color: white;
-    }
-
-    .mode-button:hover:not(.active) {
-      background: rgba(255, 255, 255, 0.15);
-      color: white;
-    }
 
 
 
@@ -436,9 +408,7 @@
     let ch1 = localStorage.getItem('channel1') || "monstercat";
     let ch2 = localStorage.getItem('channel2') || "lofi_girl";
     
-    // 播放模式設定
-    let mode1 = localStorage.getItem('mode1') || 'auto'; // auto, live
-    let mode2 = localStorage.getItem('mode2') || 'auto';
+
 
     function showLoading() {
       const loading = document.createElement('div');
@@ -469,22 +439,7 @@
       return `https://player.twitch.tv/?channel=${channel}&parent=${parent}`;
     }
 
-    // 更新模式按鈕狀態
-    function updateModeButtons() {
-      // 更新主畫面模式按鈕
-      const mainButtons = document.querySelectorAll('#mode-selector-main .mode-button');
-      mainButtons.forEach((btn, index) => {
-        const modes = ['auto', 'live'];
-        btn.classList.toggle('active', modes[index] === mode1);
-      });
 
-      // 更新小畫面模式按鈕
-      const pipButtons = document.querySelectorAll('#mode-selector-pip .mode-button');
-      pipButtons.forEach((btn, index) => {
-        const modes = ['auto', 'live'];
-        btn.classList.toggle('active', modes[index] === mode2);
-      });
-    }
 
 
 
@@ -514,8 +469,7 @@
           document.getElementById("ch1").value = ch1;
           document.getElementById("ch2").value = ch2;
           
-          // 更新模式按鈕狀態
-          updateModeButtons();
+
           
 
           
@@ -549,16 +503,7 @@
       loadPlayers();
     }
 
-    function updateMode(player, newMode) {
-      if (player === 'main') {
-        mode1 = newMode;
-        localStorage.setItem('mode1', mode1);
-      } else {
-        mode2 = newMode;
-        localStorage.setItem('mode2', mode2);
-      }
-      loadPlayers();
-    }
+
 
     function saveChannels() {
       localStorage.setItem('channel1', ch1);
@@ -597,9 +542,6 @@
     }
 
     window.onload = function() {
-      // 初始化模式按鈕狀態
-      updateModeButtons();
-      
       loadPlayers();
       setupPipClick();
       setupKeyboardShortcuts();
@@ -623,21 +565,11 @@
                   <div class="control-group">
             <div class="control-label">主畫面頻道</div>
             <input id="ch1" placeholder="輸入 Twitch 頻道名稱" />
-            <div class="mode-selector" id="mode-selector-main">
-              <button class="mode-button" onclick="updateMode('main', 'auto')">自動</button>
-              <button class="mode-button" onclick="updateMode('main', 'live')">直播</button>
-            </div>
-
           </div>
         
                   <div class="control-group">
             <div class="control-label">小畫面頻道</div>
             <input id="ch2" placeholder="輸入 Twitch 頻道名稱" />
-            <div class="mode-selector" id="mode-selector-pip">
-              <button class="mode-button" onclick="updateMode('pip', 'auto')">自動</button>
-              <button class="mode-button" onclick="updateMode('pip', 'live')">直播</button>
-            </div>
-
           </div>
         
         <div class="button-group">
