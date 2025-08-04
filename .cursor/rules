@@ -1,0 +1,53 @@
+rules:
+  - name: "Project Overview"
+    description: |
+      This is a Progressive Web App (PWA) designed to work seamlessly on iOS Safari and be installable as a home screen app.
+      The main functionality is to allow users to watch two Twitch live channels simultaneously, similar to MultiTwitch.
+
+  - name: "Tech Stack"
+    description: |
+      - Frontend: React + Vite (or Next.js if SSR needed)
+      - Player: Twitch Embed API (iframe) or Twitch Player JavaScript SDK
+      - Layout: Responsive grid with picture-in-picture-like mode
+      - PWA: Service Worker for offline shell, manifest.json for iOS install
+      - Styling: Tailwind CSS
+      - Deployment: Netlify or Vercel (HTTPS required for PWA)
+
+  - name: "Features"
+    description: |
+      - Allow user to input two Twitch channel names.
+      - Display both Twitch live streams simultaneously.
+      - Allow one video to be main (large) and the other smaller (like PiP), with a swap button.
+      - Support mute/unmute each stream separately.
+      - Support full screen for any one stream.
+      - Remember last watched channels in local storage.
+      - PWA features: installable on iOS, offline splash screen, app icon.
+
+  - name: "PWA Rules"
+    description: |
+      - Must include manifest.json with name, short_name, start_url, display=standalone, icons.
+      - Must include service-worker.js for caching basic app shell.
+      - On iOS: provide apple-touch-icon, correct meta tags, and no visible Safari UI (standalone mode).
+      - Ensure it passes Lighthouse PWA checks.
+
+  - name: "UI/UX"
+    description: |
+      - Simple, minimal interface.
+      - On iPhone in portrait, show one stream on top, one on bottom.
+      - In landscape or tablet, show two side-by-side streams.
+      - Swap button to interchange main/secondary stream positions.
+      - Dark mode support.
+
+  - name: "API Usage"
+    description: |
+      - Use Twitch Embed API:
+        https://dev.twitch.tv/docs/embed/video-and-clips/
+      - No server backend required (pure frontend).
+      - Optionally use Twitch Helix API to verify channel live status.
+
+  - name: "Testing"
+    description: |
+      - Test on iOS Safari for PWA installation.
+      - Test two streams simultaneously (performance, mute handling).
+      - Test offline PWA shell loading.
+
