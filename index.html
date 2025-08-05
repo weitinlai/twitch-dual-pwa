@@ -88,6 +88,8 @@
       -webkit-overflow-scrolling: touch;
       will-change: transform, left, top;
       transform: translateZ(0);
+      /* 確保拖拽工作 */
+      pointer-events: auto;
     }
 
     .pip-player {
@@ -97,6 +99,8 @@
       border-radius: 8px;
       display: block;
       object-fit: cover;
+      /* 防止 iframe 干擾拖拽 */
+      pointer-events: none;
     }
 
     .pip-container:active {
@@ -674,15 +678,39 @@
     function setupPipDrag() {
       const pipContainer = document.querySelector('.pip-container');
       const videoArea = document.querySelector('.video-area');
-      if (!pipContainer || !videoArea) return;
+      const pipIframe = document.getElementById('pip');
+      
+      if (!pipContainer || !videoArea) {
+        console.error('Pip drag setup failed: missing elements');
+        return;
+      }
+
+      console.log('Setting up pip drag...');
 
       // 設置為可拖拽
       pipContainer.setAttribute('draggable', 'true');
       videoArea.setAttribute('data-drop-zone', 'true');
 
+      // 防止 iframe 干擾拖拽
+      if (pipIframe) {
+        pipIframe.addEventListener('dragstart', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        });
+        
+        pipIframe.addEventListener('mousedown', function(e) {
+          e.stopPropagation();
+        });
+        
+        pipIframe.addEventListener('touchstart', function(e) {
+          e.stopPropagation();
+        });
+      }
+
       // 拖拽開始
       pipContainer.addEventListener('dragstart', function(e) {
-        console.log('Pip dragstart');
+        console.log('Pip dragstart triggered');
         e.dataTransfer.setData('text/plain', 'pip-container');
         e.dataTransfer.effectAllowed = 'move';
         pipContainer.classList.add('dragging');
@@ -757,6 +785,15 @@
         resetPipPosition();
         e.preventDefault();
       });
+
+      // 單擊切換（備用功能）
+      pipContainer.addEventListener('click', function(e) {
+        // 只有在沒有拖拽的情況下才觸發
+        if (!pipContainer.classList.contains('dragging')) {
+          console.log('Pip clicked - swapping players');
+          swapPlayers();
+        }
+      });
       
       // 長按切換功能
       let longPressTimer = null;
@@ -787,6 +824,16 @@
           clearTimeout(longPressTimer);
           longPressTimer = null;
         }
+      });
+
+      // 測試拖拽是否工作
+      console.log('Pip drag setup complete. Testing...');
+      console.log('Pip container draggable:', pipContainer.getAttribute('draggable'));
+      console.log('Video area drop zone:', videoArea.getAttribute('data-drop-zone'));
+      
+      // 測試拖拽事件
+      pipContainer.addEventListener('dragstart', function(e) {
+        console.log('✅ Pip dragstart working!');
       });
     }
 
@@ -826,7 +873,13 @@
   function setupSwapButtonDrag() {
     const swap = document.querySelector('.swap-button');
     const videoArea = document.querySelector('.video-area');
-    if (!swap || !videoArea) return;
+    
+    if (!swap || !videoArea) {
+      console.error('Swap button drag setup failed: missing elements');
+      return;
+    }
+
+    console.log('Setting up swap button drag...');
 
     // 設置為可拖拽
     swap.setAttribute('draggable', 'true');
@@ -975,7 +1028,14 @@
 
         window.onload = function() {
       loadPlayers();
-      setupPipDrag();
+      
+      // 延遲設置拖拽，確保 DOM 完全載入
+      setTimeout(() => {
+        console.log('Setting up drag and drop...');
+        setupPipDrag();
+        setupSwapButtonDrag();
+      }, 1000);
+      
       setupKeyboardShortcuts();
       setupInstallGuide();
       updateVersionInfo();
@@ -983,7 +1043,6 @@
       // 恢復小畫面位置
       restorePipPosition();
       restoreSwapButtonPosition();
-      setupSwapButtonDrag();
       
       // 顯示操作提示
       setTimeout(showPipHint, 1000);
