@@ -643,6 +643,7 @@
 
       // 統一的開始事件處理
       function handleStart(e) {
+        console.log('Pip drag start');
         const clientX = e.clientX || e.touches[0].clientX;
         const clientY = e.clientY || e.touches[0].clientY;
         
@@ -677,10 +678,15 @@
         moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         
         if (moveDistance > 10) {
+          console.log('Pip drag move, distance:', moveDistance);
           isClick = false;
           if (pipMouseDownTimer) {
             clearTimeout(pipMouseDownTimer);
             pipMouseDownTimer = null;
+          }
+          // 立即開始拖拽
+          if (!isDraggingPip) {
+            startPipDrag(e);
           }
         }
         
@@ -1088,7 +1094,7 @@
       const versionInfo = document.getElementById('version-info');
       if (versionInfo) {
         // 從 service worker 獲取版本號，如果無法獲取則使用預設值
-        const currentVersion = 'v1.8.0'; // 這裡應該與 service-worker.js 中的版本一致
+        const currentVersion = 'v1.8.1'; // 這裡應該與 service-worker.js 中的版本一致
         versionInfo.textContent = currentVersion;
         
         // 添加點擊事件來顯示詳細信息
@@ -1102,10 +1108,10 @@
 </head>
 <body>
     <div id="twitch-auth-bar" style="position:fixed;top:16px;right:16px;z-index:2000;"></div>
-  <div class="version-info" id="version-info">v1.8.0</div>
+  <div class="version-info" id="version-info">v1.8.1</div>
         <div class="video-area">
       <iframe id="main" class="main-player" allowfullscreen></iframe>
-      <iframe id="pip" class="pip-player" draggable="true" allowfullscreen></iframe>
+      <iframe id="pip" class="pip-player" allowfullscreen></iframe>
       
       <div class="swap-button" title="切換主畫面"></div>
       
