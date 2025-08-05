@@ -200,31 +200,59 @@
       position: absolute;
       top: 20px;
       right: 20px;
-      width: 48px;
-      height: 48px;
-      background: #222 linear-gradient(135deg, #9147ff 0%, #9147ff 100%);
-      border-radius: 50%;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-      border: 3px solid #fff3;
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 16px;
+      box-shadow: 
+        0 4px 16px rgba(102, 126, 234, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      border: none;
       cursor: grab;
       z-index: 20;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: box-shadow 0.2s, transform 0.2s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      backdrop-filter: blur(10px);
+      overflow: hidden;
     }
-    .swap-button:active, .swap-button.dragging {
-      cursor: grabbing;
-      box-shadow: 0 4px 16px #9147ff55;
-      transform: scale(1.08);
-    }
+
     .swap-button::before {
       content: '';
-      display: block;
-      width: 24px;
-      height: 24px;
-      background: url('data:image/svg+xml;utf8,<svg fill="white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>') no-repeat center/contain;
-      opacity: 0.85;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+      border-radius: 16px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .swap-button:hover::before {
+      opacity: 1;
+    }
+
+    .swap-button:active, .swap-button.dragging {
+      cursor: grabbing;
+      transform: scale(1.05) rotate(5deg);
+      box-shadow: 
+        0 8px 25px rgba(102, 126, 234, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    .swap-button::after {
+      content: '↔';
+      font-size: 20px;
+      font-weight: bold;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      z-index: 1;
+      position: relative;
     }
 
     /* 操作提示 */
