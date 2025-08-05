@@ -64,7 +64,7 @@
       border-radius: 0 16px 16px 0;
     }
 
-    .pip-player {
+    .pip-container {
       width: 28%;
       height: 28%;
       bottom: 20px;
@@ -81,13 +81,22 @@
       -webkit-user-select: none;
       -webkit-touch-callout: none;
       -webkit-tap-highlight-color: transparent;
+      border-radius: 8px;
+      overflow: hidden;
     }
 
-    .pip-player:active {
+    .pip-player {
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 8px;
+    }
+
+    .pip-container:active {
       cursor: grabbing;
     }
 
-    .pip-player.dragging {
+    .pip-container.dragging {
       transition: none !important;
       border-color: #3B82F6;
       box-shadow: 
@@ -99,7 +108,7 @@
       cursor: grabbing !important;
     }
 
-    .pip-player.drag-hint {
+    .pip-container.drag-hint {
       animation: pulse 0.6s ease-in-out;
       border-color: #10B981;
       box-shadow: 
@@ -631,9 +640,10 @@
     let longPressTimer = null;
 
     function setupPipDrag() {
+      const pipContainer = document.querySelector('.pip-container');
       const pip = document.getElementById('pip');
       const videoArea = document.querySelector('.video-area');
-      if (!pip || !videoArea) return;
+      if (!pipContainer || !pip || !videoArea) return;
 
       let clickTimeout = null;
       let moveDistance = 0;
@@ -652,7 +662,7 @@
         moveDistance = 0;
         isClick = true;
         
-        const rect = pip.getBoundingClientRect();
+        const rect = pipContainer.getBoundingClientRect();
         pipOffsetX = clientX - rect.left;
         pipOffsetY = clientY - rect.top;
         
@@ -719,14 +729,19 @@
       }
 
       // 滑鼠事件
-      pip.addEventListener('mousedown', handleStart);
+      pipContainer.addEventListener('mousedown', handleStart);
       document.addEventListener('mousemove', handleMove);
       document.addEventListener('mouseup', handleEnd);
       
       // 觸控事件
-      pip.addEventListener('touchstart', handleStart, { passive: false });
+      pipContainer.addEventListener('touchstart', handleStart, { passive: false });
       document.addEventListener('touchmove', handleMove, { passive: false });
       document.addEventListener('touchend', handleEnd);
+      
+      // 添加測試事件來確認事件綁定
+      console.log('Pip drag events bound');
+      pipContainer.addEventListener('mousedown', () => console.log('Pip container mousedown event'));
+      pipContainer.addEventListener('touchstart', () => console.log('Pip container touchstart event'));
       
       // 防止 iframe 內部的拖拽干擾
       pip.addEventListener('dragstart', (e) => {
@@ -735,14 +750,14 @@
       });
       
       // 雙擊重置位置
-      pip.addEventListener('dblclick', function(e) {
+      pipContainer.addEventListener('dblclick', function(e) {
         resetPipPosition();
         e.preventDefault();
       });
       
       // 雙擊重置（觸控）
       let lastTap = 0;
-      pip.addEventListener('touchend', function(e) {
+      pipContainer.addEventListener('touchend', function(e) {
         const now = Date.now();
         if (now - lastTap < 400 && !isDraggingPip) {
           resetPipPosition();
@@ -754,10 +769,10 @@
 
     function startPipDrag(e) {
       isDraggingPip = true;
-      const pip = document.getElementById('pip');
+      const pipContainer = document.querySelector('.pip-container');
       
       // 視覺反饋
-      pip.classList.add('dragging');
+      pipContainer.classList.add('dragging');
       document.body.classList.add('dragging');
       
       // 添加容器效果
@@ -773,10 +788,10 @@
 
     function endPipDrag() {
       isDraggingPip = false;
-      const pip = document.getElementById('pip');
+      const pipContainer = document.querySelector('.pip-container');
       
       // 移除視覺反饋
-      pip.classList.remove('dragging');
+      pipContainer.classList.remove('dragging');
       document.body.classList.remove('dragging');
       
       // 移除容器效果
@@ -785,23 +800,23 @@
       videoArea.classList.remove('hover');
       
       // 儲存位置
-      const left = pip.style.left;
-      const top = pip.style.top;
+      const left = pipContainer.style.left;
+      const top = pipContainer.style.top;
       if (left && top) {
         localStorage.setItem('pipPosition', JSON.stringify({ left, top }));
       }
       
       // 完成動畫
-      pip.style.transition = 'transform 0.2s ease';
-      pip.style.transform = 'scale(1.02)';
+      pipContainer.style.transition = 'transform 0.2s ease';
+      pipContainer.style.transform = 'scale(1.02)';
       setTimeout(() => {
-        pip.style.transform = 'scale(1)';
-        pip.style.transition = '';
+        pipContainer.style.transform = 'scale(1)';
+        pipContainer.style.transition = '';
       }, 200);
     }
 
     function movePipPlayer(clientX, clientY) {
-      const pip = document.getElementById('pip');
+      const pipContainer = document.querySelector('.pip-container');
       const videoArea = document.querySelector('.video-area');
       const videoRect = videoArea.getBoundingClientRect();
       
@@ -811,17 +826,17 @@
       
       // 邊界限制
       const margin = 10;
-      const maxLeft = videoRect.width - pip.offsetWidth - margin;
-      const maxTop = videoRect.height - pip.offsetHeight - margin;
+      const maxLeft = videoRect.width - pipContainer.offsetWidth - margin;
+      const maxTop = videoRect.height - pipContainer.offsetHeight - margin;
       
       newLeft = Math.max(margin, Math.min(newLeft, maxLeft));
       newTop = Math.max(margin, Math.min(newTop, maxTop));
       
       // 更新位置
-      pip.style.left = newLeft + 'px';
-      pip.style.top = newTop + 'px';
-      pip.style.right = 'auto';
-      pip.style.bottom = 'auto';
+      pipContainer.style.left = newLeft + 'px';
+      pipContainer.style.top = newTop + 'px';
+      pipContainer.style.right = 'auto';
+      pipContainer.style.bottom = 'auto';
     }
 
 
@@ -1049,16 +1064,16 @@
     }
 
     function restorePipPosition() {
-      const pip = document.getElementById('pip');
+      const pipContainer = document.querySelector('.pip-container');
       const savedPosition = localStorage.getItem('pipPosition');
       
-      if (savedPosition) {
+      if (savedPosition && pipContainer) {
         try {
           const position = JSON.parse(savedPosition);
-          pip.style.left = position.left;
-          pip.style.top = position.top;
-          pip.style.right = 'auto';
-          pip.style.bottom = 'auto';
+          pipContainer.style.left = position.left;
+          pipContainer.style.top = position.top;
+          pipContainer.style.right = 'auto';
+          pipContainer.style.bottom = 'auto';
         } catch (e) {
           console.log('無法恢復小畫面位置');
           resetPipPosition();
@@ -1067,12 +1082,14 @@
     }
 
     function resetPipPosition() {
-      const pip = document.getElementById('pip');
-      pip.style.left = 'auto';
-      pip.style.top = 'auto';
-      pip.style.right = '20px';
-      pip.style.bottom = '20px';
-      localStorage.removeItem('pipPosition');
+      const pipContainer = document.querySelector('.pip-container');
+      if (pipContainer) {
+        pipContainer.style.left = 'auto';
+        pipContainer.style.top = 'auto';
+        pipContainer.style.right = '20px';
+        pipContainer.style.bottom = '20px';
+        localStorage.removeItem('pipPosition');
+      }
     }
 
 
@@ -1094,7 +1111,7 @@
       const versionInfo = document.getElementById('version-info');
       if (versionInfo) {
         // 從 service worker 獲取版本號，如果無法獲取則使用預設值
-        const currentVersion = 'v1.8.1'; // 這裡應該與 service-worker.js 中的版本一致
+        const currentVersion = 'v1.8.2'; // 這裡應該與 service-worker.js 中的版本一致
         versionInfo.textContent = currentVersion;
         
         // 添加點擊事件來顯示詳細信息
@@ -1108,10 +1125,12 @@
 </head>
 <body>
     <div id="twitch-auth-bar" style="position:fixed;top:16px;right:16px;z-index:2000;"></div>
-  <div class="version-info" id="version-info">v1.8.1</div>
+  <div class="version-info" id="version-info">v1.8.2</div>
         <div class="video-area">
       <iframe id="main" class="main-player" allowfullscreen></iframe>
-      <iframe id="pip" class="pip-player" allowfullscreen></iframe>
+      <div class="pip-container">
+        <iframe id="pip" class="pip-player" allowfullscreen></iframe>
+      </div>
       
       <div class="swap-button" title="切換主畫面"></div>
       
