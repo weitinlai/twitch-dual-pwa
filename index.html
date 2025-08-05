@@ -83,9 +83,12 @@
       -webkit-tap-highlight-color: transparent;
       border-radius: 8px;
       overflow: hidden;
-      /* iOS 觸控優化 */
+      /* 觸控優化 */
       touch-action: manipulation;
       -webkit-overflow-scrolling: touch;
+      /* 拖拽優化 */
+      will-change: transform, left, top;
+      transform: translateZ(0);
     }
 
     .pip-player {
@@ -214,11 +217,14 @@
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       backdrop-filter: blur(10px);
       overflow: hidden;
-      /* iOS 觸控優化 */
+      /* 觸控優化 */
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
       -webkit-user-select: none;
       user-select: none;
+      /* 拖拽優化 */
+      will-change: transform, left, top;
+      transform: translateZ(0);
     }
 
     .swap-button::before {
@@ -666,8 +672,8 @@
             // 統一的開始事件處理
       function handleStart(e) {
         console.log('Pip drag start', e.type);
-        const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-        const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+        const clientX = e.clientX || e.pointerX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+        const clientY = e.clientY || e.pointerY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
         
         if (!clientX || !clientY) return;
         
@@ -680,10 +686,10 @@
         pipOffsetX = clientX - rect.left;
         pipOffsetY = clientY - rect.top;
         
-        // iOS 觸控優化：更短的延遲
-        const delay = e.type === 'touchstart' ? 50 : 100;
+        // 更短的延遲 - 幾乎立即響應
+        const delay = (e.type === 'touchstart' || e.type === 'pointerdown') ? 10 : 30;
         pipMouseDownTimer = setTimeout(() => {
-          if (isClick && moveDistance < 5) {
+          if (isClick && moveDistance < 3) {
             startPipDrag(e);
           }
         }, delay);
@@ -691,12 +697,12 @@
         e.preventDefault();
       }
 
-      // 統一的移動事件處理
+            // 統一的移動事件處理
       function handleMove(e) {
         if (!isClick) return;
         
-        const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-        const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+        const clientX = e.clientX || e.pointerX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+        const clientY = e.clientY || e.pointerY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
         
         if (!clientX || !clientY) return;
         
@@ -704,8 +710,8 @@
         const deltaY = clientY - startY;
         moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         
-        // iOS 觸控優化：更敏感的觸發
-        const threshold = e.type === 'touchmove' ? 2 : 3;
+        // 更敏感的觸發 - 幾乎立即響應
+        const threshold = (e.type === 'touchmove' || e.type === 'pointermove') ? 0.5 : 1;
         if (moveDistance > threshold) {
           console.log('Pip drag move, distance:', moveDistance, 'type:', e.type);
           isClick = false;
@@ -737,7 +743,7 @@
         
         if (isDraggingPip) {
           endPipDrag();
-        } else if (isClick && moveDistance < 3) {
+        } else if (isClick && moveDistance < 2) {
           // 點擊切換（長按功能）
           if (clickTimeout) clearTimeout(clickTimeout);
           clickTimeout = setTimeout(() => {
@@ -755,10 +761,15 @@
       document.addEventListener('mousemove', handleMove);
       document.addEventListener('mouseup', handleEnd);
       
-      // 觸控事件 - iOS 優化
+      // 觸控事件 - 優化響應性
       pipContainer.addEventListener('touchstart', handleStart, { passive: false });
       document.addEventListener('touchmove', handleMove, { passive: false });
       document.addEventListener('touchend', handleEnd);
+      
+      // 添加 pointer 事件支援，提供更好的跨平台體驗
+      pipContainer.addEventListener('pointerdown', handleStart);
+      document.addEventListener('pointermove', handleMove);
+      document.addEventListener('pointerup', handleEnd);
       
       // iOS 特定優化：防止滾動干擾
       pipContainer.addEventListener('touchmove', (e) => {
@@ -868,12 +879,12 @@
       const videoArea = document.querySelector('.video-area');
       const videoRect = videoArea.getBoundingClientRect();
       
-      // 直接使用滑鼠位置，不使用偏移量來讓拖拽更流暢
+      // 直接使用滑鼠位置，讓拖拽更順暢
       let newLeft = clientX - videoRect.left - (pipContainer.offsetWidth / 2);
       let newTop = clientY - videoRect.top - (pipContainer.offsetHeight / 2);
       
-      // 邊界限制
-      const margin = 20;
+      // 邊界限制 - 減少邊距讓移動範圍更大
+      const margin = 10;
       const maxLeft = videoRect.width - pipContainer.offsetWidth - margin;
       const maxTop = videoRect.height - pipContainer.offsetHeight - margin;
       
@@ -938,8 +949,8 @@
     // 統一的開始事件處理
     function handleStart(e) {
       console.log('Swap drag start', e.type);
-      const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-      const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+      const clientX = e.clientX || e.pointerX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+      const clientY = e.clientY || e.pointerY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
       
       if (!clientX || !clientY) return;
       
@@ -952,10 +963,10 @@
       swapOffsetX = clientX - rect.left;
       swapOffsetY = clientY - rect.top;
       
-      // iOS 觸控優化：更短的延遲
-      const delay = e.type === 'touchstart' ? 50 : 100;
+      // 更短的延遲 - 幾乎立即響應
+      const delay = (e.type === 'touchstart' || e.type === 'pointerdown') ? 10 : 30;
       swapMouseDownTimer = setTimeout(() => {
-        if (isClick && moveDistance < 5) {
+        if (isClick && moveDistance < 3) {
           startSwapDrag(e);
         }
       }, delay);
@@ -967,8 +978,8 @@
     function handleMove(e) {
       if (!isClick) return;
       
-      const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-      const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+      const clientX = e.clientX || e.pointerX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+      const clientY = e.clientY || e.pointerY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
       
       if (!clientX || !clientY) return;
       
@@ -976,8 +987,8 @@
       const deltaY = clientY - startY;
       moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
       
-      // iOS 觸控優化：更敏感的觸發
-      const threshold = e.type === 'touchmove' ? 2 : 3;
+      // 更敏感的觸發 - 幾乎立即響應
+      const threshold = (e.type === 'touchmove' || e.type === 'pointermove') ? 0.5 : 1;
       if (moveDistance > threshold) {
         console.log('Swap drag move, distance:', moveDistance, 'type:', e.type);
         isClick = false;
@@ -1009,7 +1020,7 @@
       
       if (isDraggingSwap) {
         endSwapDrag();
-      } else if (isClick && moveDistance < 3) {
+      } else if (isClick && moveDistance < 2) {
         // 點擊切換
         if (clickTimeout) clearTimeout(clickTimeout);
         clickTimeout = setTimeout(() => {
@@ -1026,10 +1037,15 @@
     document.addEventListener('mousemove', handleMove);
     document.addEventListener('mouseup', handleEnd);
     
-    // 觸控事件 - iOS 優化
+    // 觸控事件 - 優化響應性
     swap.addEventListener('touchstart', handleStart, { passive: false });
     document.addEventListener('touchmove', handleMove, { passive: false });
     document.addEventListener('touchend', handleEnd);
+    
+    // 添加 pointer 事件支援，提供更好的跨平台體驗
+    swap.addEventListener('pointerdown', handleStart);
+    document.addEventListener('pointermove', handleMove);
+    document.addEventListener('pointerup', handleEnd);
     
     // iOS 特定優化：防止滾動干擾
     swap.addEventListener('touchmove', (e) => {
@@ -1099,13 +1115,13 @@
       const swap = document.querySelector('.swap-button');
       const videoArea = document.querySelector('.video-area');
       const areaRect = videoArea.getBoundingClientRect();
-      const margin = 20;
+      const margin = 10;
       
-      // 直接使用滑鼠位置，不使用偏移量來讓拖拽更流暢
+      // 直接使用滑鼠位置，讓拖拽更順暢
       let newLeft = clientX - areaRect.left - (swap.offsetWidth / 2);
       let newTop = clientY - areaRect.top - (swap.offsetHeight / 2);
       
-      // 邊界限制
+      // 邊界限制 - 減少邊距讓移動範圍更大
       const maxLeft = areaRect.width - swap.offsetWidth - margin;
       const maxTop = areaRect.height - swap.offsetHeight - margin;
       newLeft = Math.max(margin, Math.min(newLeft, maxLeft));
