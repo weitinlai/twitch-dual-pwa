@@ -83,10 +83,9 @@
       -webkit-tap-highlight-color: transparent;
       border-radius: 8px;
       overflow: hidden;
-      /* 觸控優化 */
+      /* HTML5 拖拽優化 */
       touch-action: manipulation;
       -webkit-overflow-scrolling: touch;
-      /* 拖拽優化 */
       will-change: transform, left, top;
       transform: translateZ(0);
     }
@@ -115,6 +114,28 @@
       opacity: 0.9;
       cursor: grabbing !important;
       filter: brightness(1.1);
+    }
+
+    /* HTML5 拖拽樣式 */
+    .pip-container[draggable="true"] {
+      cursor: grab;
+    }
+
+    .pip-container[draggable="true"]:active {
+      cursor: grabbing;
+    }
+
+    .swap-button[draggable="true"] {
+      cursor: grab;
+    }
+
+    .swap-button[draggable="true"]:active {
+      cursor: grabbing;
+    }
+
+    .video-area.drag-over {
+      background: rgba(59, 130, 246, 0.1);
+      border: 2px dashed rgba(59, 130, 246, 0.3);
     }
 
     .pip-container.drag-hint {
@@ -217,12 +238,11 @@
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       backdrop-filter: blur(10px);
       overflow: hidden;
-      /* 觸控優化 */
+      /* HTML5 拖拽優化 */
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
       -webkit-user-select: none;
       user-select: none;
-      /* 拖拽優化 */
       will-change: transform, left, top;
       transform: translateZ(0);
     }
@@ -650,170 +670,115 @@
 
 
 
-        // Pip Player 拖拽功能 - 參考 Swap Button 實現
-    let isDraggingPip = false;
-    let pipOffsetX = 0;
-    let pipOffsetY = 0;
-    let pipMouseDownTimer = null;
-    let longPressTimer = null;
-
+                // HTML5 拖拽功能
     function setupPipDrag() {
       const pipContainer = document.querySelector('.pip-container');
-      const pip = document.getElementById('pip');
       const videoArea = document.querySelector('.video-area');
-      if (!pipContainer || !pip || !videoArea) return;
+      if (!pipContainer || !videoArea) return;
 
-      let clickTimeout = null;
-      let moveDistance = 0;
-      let startX = 0;
-      let startY = 0;
-      let isClick = false;
+      // 設置為可拖拽
+      pipContainer.setAttribute('draggable', 'true');
+      videoArea.setAttribute('data-drop-zone', 'true');
 
-            // 統一的開始事件處理
-      function handleStart(e) {
-        console.log('Pip drag start', e.type);
-        const clientX = e.clientX || e.pointerX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-        const clientY = e.clientY || e.pointerY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+      // 拖拽開始
+      pipContainer.addEventListener('dragstart', function(e) {
+        console.log('Pip dragstart');
+        e.dataTransfer.setData('text/plain', 'pip-container');
+        e.dataTransfer.effectAllowed = 'move';
+        pipContainer.classList.add('dragging');
         
-        if (!clientX || !clientY) return;
-        
-        startX = clientX;
-        startY = clientY;
-        moveDistance = 0;
-        isClick = true;
-        
-        const rect = pipContainer.getBoundingClientRect();
-        pipOffsetX = clientX - rect.left;
-        pipOffsetY = clientY - rect.top;
-        
-        // 更短的延遲 - 幾乎立即響應
-        const delay = (e.type === 'touchstart' || e.type === 'pointerdown') ? 10 : 30;
-        pipMouseDownTimer = setTimeout(() => {
-          if (isClick && moveDistance < 3) {
-            startPipDrag(e);
-          }
-        }, delay);
-        
-        e.preventDefault();
-      }
-
-            // 統一的移動事件處理
-      function handleMove(e) {
-        if (!isClick) return;
-        
-        const clientX = e.clientX || e.pointerX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-        const clientY = e.clientY || e.pointerY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-        
-        if (!clientX || !clientY) return;
-        
-        const deltaX = clientX - startX;
-        const deltaY = clientY - startY;
-        moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        
-        // 更敏感的觸發 - 幾乎立即響應
-        const threshold = (e.type === 'touchmove' || e.type === 'pointermove') ? 0.5 : 1;
-        if (moveDistance > threshold) {
-          console.log('Pip drag move, distance:', moveDistance, 'type:', e.type);
-          isClick = false;
-          if (pipMouseDownTimer) {
-            clearTimeout(pipMouseDownTimer);
-            pipMouseDownTimer = null;
-          }
-          // 立即開始拖拽
-          if (!isDraggingPip) {
-            startPipDrag(e);
-          }
-        }
-        
-        if (isDraggingPip) {
-          movePipPlayer(clientX, clientY);
-        }
-        
-        e.preventDefault();
-      }
-
-      // 統一的結束事件處理
-      function handleEnd(e) {
-        console.log('Pip drag end', e.type, 'isDragging:', isDraggingPip, 'moveDistance:', moveDistance);
-        
-        if (pipMouseDownTimer) {
-          clearTimeout(pipMouseDownTimer);
-          pipMouseDownTimer = null;
-        }
-        
-        if (isDraggingPip) {
-          endPipDrag();
-        } else if (isClick && moveDistance < 2) {
-          // 點擊切換（長按功能）
-          if (clickTimeout) clearTimeout(clickTimeout);
-          clickTimeout = setTimeout(() => {
-            console.log('Pip long press - swapping players');
-            swapPlayers();
-          }, 10);
-        }
-        
-        isClick = false;
-        moveDistance = 0;
-      }
-
-      // 滑鼠事件
-      pipContainer.addEventListener('mousedown', handleStart);
-      document.addEventListener('mousemove', handleMove);
-      document.addEventListener('mouseup', handleEnd);
-      
-      // 觸控事件 - 優化響應性
-      pipContainer.addEventListener('touchstart', handleStart, { passive: false });
-      document.addEventListener('touchmove', handleMove, { passive: false });
-      document.addEventListener('touchend', handleEnd);
-      
-      // 添加 pointer 事件支援，提供更好的跨平台體驗
-      pipContainer.addEventListener('pointerdown', handleStart);
-      document.addEventListener('pointermove', handleMove);
-      document.addEventListener('pointerup', handleEnd);
-      
-      // iOS 特定優化：防止滾動干擾
-      pipContainer.addEventListener('touchmove', (e) => {
-        if (isDraggingPip) {
-          e.preventDefault();
-        }
-      }, { passive: false });
-      
-      // 添加測試事件來確認事件綁定
-      console.log('Pip drag events bound');
-      pipContainer.addEventListener('mousedown', () => console.log('Pip container mousedown event'));
-      pipContainer.addEventListener('touchstart', () => console.log('Pip container touchstart event'));
-      
-      // 防止 iframe 內部的拖拽干擾
-      pip.addEventListener('dragstart', (e) => {
-        e.preventDefault();
-        return false;
+        // 設置拖拽圖像
+        const dragImage = pipContainer.cloneNode(true);
+        dragImage.style.opacity = '0.8';
+        dragImage.style.transform = 'scale(0.8)';
+        document.body.appendChild(dragImage);
+        e.dataTransfer.setDragImage(dragImage, 0, 0);
+        setTimeout(() => document.body.removeChild(dragImage), 0);
       });
-      
+
+      // 拖拽結束
+      pipContainer.addEventListener('dragend', function(e) {
+        console.log('Pip dragend');
+        pipContainer.classList.remove('dragging');
+        videoArea.classList.remove('drag-over');
+      });
+
+      // 拖拽懸停
+      videoArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        videoArea.classList.add('drag-over');
+      });
+
+      // 拖拽離開
+      videoArea.addEventListener('dragleave', function(e) {
+        if (!videoArea.contains(e.relatedTarget)) {
+          videoArea.classList.remove('drag-over');
+        }
+      });
+
+      // 放置處理
+      videoArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        console.log('Pip drop');
+        videoArea.classList.remove('drag-over');
+        
+        const data = e.dataTransfer.getData('text/plain');
+        if (data === 'pip-container') {
+          // 計算新位置
+          const rect = videoArea.getBoundingClientRect();
+          const x = e.clientX - rect.left - (pipContainer.offsetWidth / 2);
+          const y = e.clientY - rect.top - (pipContainer.offsetHeight / 2);
+          
+          // 邊界限制
+          const margin = 10;
+          const maxX = rect.width - pipContainer.offsetWidth - margin;
+          const maxY = rect.height - pipContainer.offsetHeight - margin;
+          
+          const newX = Math.max(margin, Math.min(x, maxX));
+          const newY = Math.max(margin, Math.min(y, maxY));
+          
+          // 更新位置
+          pipContainer.style.left = newX + 'px';
+          pipContainer.style.top = newY + 'px';
+          pipContainer.style.right = 'auto';
+          pipContainer.style.bottom = 'auto';
+          
+          // 儲存位置
+          localStorage.setItem('pipPosition', JSON.stringify({ 
+            left: newX + 'px', 
+            top: newY + 'px' 
+          }));
+        }
+      });
+
       // 雙擊重置位置
       pipContainer.addEventListener('dblclick', function(e) {
         resetPipPosition();
         e.preventDefault();
       });
       
-      // 雙擊重置（觸控）
-      let lastTap = 0;
-      pipContainer.addEventListener('touchend', function(e) {
-        const now = Date.now();
-        if (now - lastTap < 400 && !isDraggingPip) {
-          resetPipPosition();
-          e.preventDefault();
-        }
-        lastTap = now;
+      // 長按切換功能
+      let longPressTimer = null;
+      pipContainer.addEventListener('mousedown', function(e) {
+        longPressTimer = setTimeout(() => {
+          console.log('Long press detected');
+          swapPlayers();
+        }, 500);
       });
       
-      // iOS 長按優化
-      let longPressTimer = null;
+      pipContainer.addEventListener('mouseup', function(e) {
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+      });
+      
+      // 觸控長按
       pipContainer.addEventListener('touchstart', function(e) {
         longPressTimer = setTimeout(() => {
-          if (!isDraggingPip) {
-            console.log('iOS long press detected');
-            swapPlayers();
-          }
+          console.log('Touch long press detected');
+          swapPlayers();
         }, 500);
       });
       
@@ -825,79 +790,7 @@
       });
     }
 
-    function startPipDrag(e) {
-      console.log('Starting pip drag');
-      isDraggingPip = true;
-      const pipContainer = document.querySelector('.pip-container');
-      
-      // 視覺反饋
-      pipContainer.classList.add('dragging');
-      document.body.classList.add('dragging');
-      
-      // 添加容器效果
-      const videoArea = document.querySelector('.video-area');
-      videoArea.classList.add('drag-active');
-      
-      // 清除長按計時器
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-    }
 
-    function endPipDrag() {
-      isDraggingPip = false;
-      const pipContainer = document.querySelector('.pip-container');
-      
-      // 移除視覺反饋
-      pipContainer.classList.remove('dragging');
-      document.body.classList.remove('dragging');
-      
-      // 移除容器效果
-      const videoArea = document.querySelector('.video-area');
-      videoArea.classList.remove('drag-active');
-      videoArea.classList.remove('hover');
-      
-      // 儲存位置
-      const left = pipContainer.style.left;
-      const top = pipContainer.style.top;
-      if (left && top) {
-        localStorage.setItem('pipPosition', JSON.stringify({ left, top }));
-      }
-      
-      // 完成動畫
-      pipContainer.style.transition = 'transform 0.2s ease';
-      pipContainer.style.transform = 'scale(1.02)';
-      setTimeout(() => {
-        pipContainer.style.transform = 'scale(1)';
-        pipContainer.style.transition = '';
-      }, 200);
-    }
-
-    function movePipPlayer(clientX, clientY) {
-      const pipContainer = document.querySelector('.pip-container');
-      const videoArea = document.querySelector('.video-area');
-      const videoRect = videoArea.getBoundingClientRect();
-      
-      // 直接使用滑鼠位置，讓拖拽更順暢
-      let newLeft = clientX - videoRect.left - (pipContainer.offsetWidth / 2);
-      let newTop = clientY - videoRect.top - (pipContainer.offsetHeight / 2);
-      
-      // 邊界限制 - 減少邊距讓移動範圍更大
-      const margin = 10;
-      const maxLeft = videoRect.width - pipContainer.offsetWidth - margin;
-      const maxTop = videoRect.height - pipContainer.offsetHeight - margin;
-      
-      newLeft = Math.max(margin, Math.min(newLeft, maxLeft));
-      newTop = Math.max(margin, Math.min(newTop, maxTop));
-      
-      // 立即更新位置，不使用 transition
-      pipContainer.style.transition = 'none';
-      pipContainer.style.left = newLeft + 'px';
-      pipContainer.style.top = newTop + 'px';
-      pipContainer.style.right = 'auto';
-      pipContainer.style.bottom = 'auto';
-    }
 
 
 
@@ -928,212 +821,132 @@
       });
     }
 
-        // Swap button drag & drop
+                // HTML5 Swap button drag & drop
 (function() {
-  let isDraggingSwap = false;
-  let swapOffsetX = 0;
-  let swapOffsetY = 0;
-  let swapMouseDownTimer = null;
-
   function setupSwapButtonDrag() {
     const swap = document.querySelector('.swap-button');
     const videoArea = document.querySelector('.video-area');
     if (!swap || !videoArea) return;
 
-    let clickTimeout = null;
-    let moveDistance = 0;
-    let startX = 0;
-    let startY = 0;
-    let isClick = false;
+    // 設置為可拖拽
+    swap.setAttribute('draggable', 'true');
 
-    // 統一的開始事件處理
-    function handleStart(e) {
-      console.log('Swap drag start', e.type);
-      const clientX = e.clientX || e.pointerX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-      const clientY = e.clientY || e.pointerY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+    // 拖拽開始
+    swap.addEventListener('dragstart', function(e) {
+      console.log('Swap dragstart');
+      e.dataTransfer.setData('text/plain', 'swap-button');
+      e.dataTransfer.effectAllowed = 'move';
+      swap.classList.add('dragging');
       
-      if (!clientX || !clientY) return;
-      
-      startX = clientX;
-      startY = clientY;
-      moveDistance = 0;
-      isClick = true;
-      
-      const rect = swap.getBoundingClientRect();
-      swapOffsetX = clientX - rect.left;
-      swapOffsetY = clientY - rect.top;
-      
-      // 更短的延遲 - 幾乎立即響應
-      const delay = (e.type === 'touchstart' || e.type === 'pointerdown') ? 10 : 30;
-      swapMouseDownTimer = setTimeout(() => {
-        if (isClick && moveDistance < 3) {
-          startSwapDrag(e);
-        }
-      }, delay);
-      
+      // 設置拖拽圖像
+      const dragImage = swap.cloneNode(true);
+      dragImage.style.opacity = '0.8';
+      dragImage.style.transform = 'scale(0.8)';
+      document.body.appendChild(dragImage);
+      e.dataTransfer.setDragImage(dragImage, 0, 0);
+      setTimeout(() => document.body.removeChild(dragImage), 0);
+    });
+
+    // 拖拽結束
+    swap.addEventListener('dragend', function(e) {
+      console.log('Swap dragend');
+      swap.classList.remove('dragging');
+      videoArea.classList.remove('drag-over');
+    });
+
+    // 拖拽懸停
+    videoArea.addEventListener('dragover', function(e) {
       e.preventDefault();
-    }
+      e.dataTransfer.dropEffect = 'move';
+      videoArea.classList.add('drag-over');
+    });
 
-    // 統一的移動事件處理
-    function handleMove(e) {
-      if (!isClick) return;
-      
-      const clientX = e.clientX || e.pointerX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-      const clientY = e.clientY || e.pointerY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-      
-      if (!clientX || !clientY) return;
-      
-      const deltaX = clientX - startX;
-      const deltaY = clientY - startY;
-      moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-      
-      // 更敏感的觸發 - 幾乎立即響應
-      const threshold = (e.type === 'touchmove' || e.type === 'pointermove') ? 0.5 : 1;
-      if (moveDistance > threshold) {
-        console.log('Swap drag move, distance:', moveDistance, 'type:', e.type);
-        isClick = false;
-        if (swapMouseDownTimer) {
-          clearTimeout(swapMouseDownTimer);
-          swapMouseDownTimer = null;
-        }
-        // 立即開始拖拽
-        if (!isDraggingSwap) {
-          startSwapDrag(e);
-        }
-      }
-      
-      if (isDraggingSwap) {
-        moveSwapButton(clientX, clientY);
-      }
-      
-      e.preventDefault();
-    }
-
-    // 統一的結束事件處理
-    function handleEnd(e) {
-      console.log('Swap drag end', e.type, 'isDragging:', isDraggingSwap, 'moveDistance:', moveDistance);
-      
-      if (swapMouseDownTimer) {
-        clearTimeout(swapMouseDownTimer);
-        swapMouseDownTimer = null;
-      }
-      
-      if (isDraggingSwap) {
-        endSwapDrag();
-      } else if (isClick && moveDistance < 2) {
-        // 點擊切換
-        if (clickTimeout) clearTimeout(clickTimeout);
-        clickTimeout = setTimeout(() => {
-          swapPlayers();
-        }, 10);
-      }
-      
-      isClick = false;
-      moveDistance = 0;
-    }
-
-    // 滑鼠事件
-    swap.addEventListener('mousedown', handleStart);
-    document.addEventListener('mousemove', handleMove);
-    document.addEventListener('mouseup', handleEnd);
-    
-    // 觸控事件 - 優化響應性
-    swap.addEventListener('touchstart', handleStart, { passive: false });
-    document.addEventListener('touchmove', handleMove, { passive: false });
-    document.addEventListener('touchend', handleEnd);
-    
-    // 添加 pointer 事件支援，提供更好的跨平台體驗
-    swap.addEventListener('pointerdown', handleStart);
-    document.addEventListener('pointermove', handleMove);
-    document.addEventListener('pointerup', handleEnd);
-    
-    // iOS 特定優化：防止滾動干擾
-    swap.addEventListener('touchmove', (e) => {
-      if (isDraggingSwap) {
-        e.preventDefault();
-      }
-    }, { passive: false });
-    
-    // 添加直接的點擊處理作為備用
-    swap.addEventListener('click', function(e) {
-      if (!isDraggingSwap) {
-        console.log('Swap button clicked');
-        swapPlayers();
+    // 拖拽離開
+    videoArea.addEventListener('dragleave', function(e) {
+      if (!videoArea.contains(e.relatedTarget)) {
+        videoArea.classList.remove('drag-over');
       }
     });
+
+    // 放置處理
+    videoArea.addEventListener('drop', function(e) {
+      e.preventDefault();
+      console.log('Swap drop');
+      videoArea.classList.remove('drag-over');
+      
+      const data = e.dataTransfer.getData('text/plain');
+      if (data === 'swap-button') {
+        // 計算新位置
+        const rect = videoArea.getBoundingClientRect();
+        const x = e.clientX - rect.left - (swap.offsetWidth / 2);
+        const y = e.clientY - rect.top - (swap.offsetHeight / 2);
+        
+        // 邊界限制
+        const margin = 10;
+        const maxX = rect.width - swap.offsetWidth - margin;
+        const maxY = rect.height - swap.offsetHeight - margin;
+        
+        const newX = Math.max(margin, Math.min(x, maxX));
+        const newY = Math.max(margin, Math.min(y, maxY));
+        
+        // 更新位置
+        swap.style.left = newX + 'px';
+        swap.style.top = newY + 'px';
+        swap.style.right = 'auto';
+        swap.style.bottom = 'auto';
+        
+        // 儲存位置
+        localStorage.setItem('swapButtonPosition', JSON.stringify({ 
+          left: newX + 'px', 
+          top: newY + 'px' 
+        }));
+      }
+    });
+
+    // 點擊切換功能
+    swap.addEventListener('click', function(e) {
+      console.log('Swap button clicked');
+      swapPlayers();
+    });
     
-    // 雙擊重置（桌面）
+    // 雙擊重置位置
     swap.addEventListener('dblclick', function(e) {
       resetSwapButtonPosition();
       e.preventDefault();
     });
     
-    // 雙擊重置（觸控）
-    let lastTap = 0;
-    swap.addEventListener('touchend', function(e) {
-      const now = Date.now();
-      if (now - lastTap < 400 && !isDraggingSwap) {
-        resetSwapButtonPosition();
-        e.preventDefault();
-      }
-      lastTap = now;
+    // 長按切換功能
+    let longPressTimer = null;
+    swap.addEventListener('mousedown', function(e) {
+      longPressTimer = setTimeout(() => {
+        console.log('Swap long press detected');
+        swapPlayers();
+      }, 500);
     });
     
-    // iOS 長按優化
-    let swapLongPressTimer = null;
+    swap.addEventListener('mouseup', function(e) {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    });
+    
+    // 觸控長按
     swap.addEventListener('touchstart', function(e) {
-      swapLongPressTimer = setTimeout(() => {
-        if (!isDraggingSwap) {
-          console.log('iOS swap long press detected');
-          swapPlayers();
-        }
+      longPressTimer = setTimeout(() => {
+        console.log('Swap touch long press detected');
+        swapPlayers();
       }, 500);
     });
     
     swap.addEventListener('touchend', function(e) {
-      if (swapLongPressTimer) {
-        clearTimeout(swapLongPressTimer);
-        swapLongPressTimer = null;
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
       }
     });
   }
-  function startSwapDrag(e) {
-    console.log('Starting swap drag');
-    isDraggingSwap = true;
-    document.body.classList.add('dragging');
-    document.querySelector('.swap-button').classList.add('dragging');
-  }
-  function endSwapDrag() {
-    isDraggingSwap = false;
-    document.body.classList.remove('dragging');
-    document.querySelector('.swap-button').classList.remove('dragging');
-    // 儲存位置
-    const swap = document.querySelector('.swap-button');
-    localStorage.setItem('swapButtonPosition', JSON.stringify({ left: swap.style.left, top: swap.style.top }));
-  }
-      function moveSwapButton(clientX, clientY) {
-      const swap = document.querySelector('.swap-button');
-      const videoArea = document.querySelector('.video-area');
-      const areaRect = videoArea.getBoundingClientRect();
-      const margin = 10;
-      
-      // 直接使用滑鼠位置，讓拖拽更順暢
-      let newLeft = clientX - areaRect.left - (swap.offsetWidth / 2);
-      let newTop = clientY - areaRect.top - (swap.offsetHeight / 2);
-      
-      // 邊界限制 - 減少邊距讓移動範圍更大
-      const maxLeft = areaRect.width - swap.offsetWidth - margin;
-      const maxTop = areaRect.height - swap.offsetHeight - margin;
-      newLeft = Math.max(margin, Math.min(newLeft, maxLeft));
-      newTop = Math.max(margin, Math.min(newTop, maxTop));
-      
-      // 立即更新位置，不使用 transition
-      swap.style.transition = 'none';
-      swap.style.left = newLeft + 'px';
-      swap.style.top = newTop + 'px';
-      swap.style.right = 'auto';
-      swap.style.bottom = 'auto';
-    }
+
   window.restoreSwapButtonPosition = function() {
     const swap = document.querySelector('.swap-button');
     const pos = localStorage.getItem('swapButtonPosition');
@@ -1147,6 +960,7 @@
       } catch {}
     }
   }
+
   window.resetSwapButtonPosition = function() {
     const swap = document.querySelector('.swap-button');
     swap.style.left = 'auto';
@@ -1155,6 +969,7 @@
     swap.style.bottom = 'auto';
     localStorage.removeItem('swapButtonPosition');
   }
+
   window.setupSwapButtonDrag = setupSwapButtonDrag;
 })();
 
@@ -1234,9 +1049,9 @@
         // 根據設備類型顯示不同的提示
         const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
         if (isIOS) {
-          hint.textContent = '拖拽移動 • 長按切換 • 雙擊重置位置';
+          hint.textContent = '拖拽移動 • 點擊切換 • 雙擊重置位置';
         } else {
-          hint.textContent = '拖拽移動 • 長按切換 • 雙擊重置位置';
+          hint.textContent = '拖拽移動 • 點擊切換 • 雙擊重置位置';
         }
         
         hint.classList.add('show');
@@ -1252,7 +1067,7 @@
       const versionInfo = document.getElementById('version-info');
       if (versionInfo) {
         // 從 service worker 獲取版本號，如果無法獲取則使用預設值
-        const currentVersion = 'v1.8.7'; // 這裡應該與 service-worker.js 中的版本一致
+        const currentVersion = 'v1.8.8'; // 這裡應該與 service-worker.js 中的版本一致
         versionInfo.textContent = currentVersion;
         
         // 添加點擊事件來顯示詳細信息
@@ -1266,16 +1081,16 @@
 </head>
 <body>
     <div id="twitch-auth-bar" style="position:fixed;top:16px;right:16px;z-index:2000;"></div>
-  <div class="version-info" id="version-info">v1.8.7</div>
+  <div class="version-info" id="version-info">v1.8.8</div>
         <div class="video-area">
       <iframe id="main" class="main-player" allowfullscreen></iframe>
-      <div class="pip-container">
+      <div class="pip-container" draggable="true">
         <iframe id="pip" class="pip-player" allowfullscreen></iframe>
       </div>
       
-      <div class="swap-button" title="切換主畫面"></div>
+      <div class="swap-button" draggable="true" title="切換主畫面"></div>
       
-      <div class="pip-hint" id="pip-hint">拖拽移動 • 長按切換 • 雙擊重置位置</div>
+      <div class="pip-hint" id="pip-hint">拖拽移動 • 點擊切換 • 雙擊重置位置</div>
 
 
 
