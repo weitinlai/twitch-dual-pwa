@@ -863,6 +863,8 @@
     const videoArea = document.querySelector('.video-area');
     if (!swap || !videoArea) return;
 
+    let clickTimeout = null;
+
     // 滑鼠事件
     swap.addEventListener('mousedown', function(e) {
       swapMouseDown = true;
@@ -874,14 +876,16 @@
       }, 80);
       e.preventDefault();
     });
-    document.addEventListener('mousemove', function(e) {
-      if (!isDraggingSwap || !swapMouseDown) return;
-      moveSwapButton(e.clientX, e.clientY);
-      e.preventDefault();
-    });
     document.addEventListener('mouseup', function(e) {
       if (swapMouseDownTimer) clearTimeout(swapMouseDownTimer);
       if (isDraggingSwap) endSwapDrag();
+      else if (swapMouseDown) {
+        // 只有沒拖曳才交換
+        if (clickTimeout) clearTimeout(clickTimeout);
+        clickTimeout = setTimeout(() => {
+          swapPlayers();
+        }, 10);
+      }
       swapMouseDown = false;
     });
     // 觸控事件
@@ -1078,7 +1082,7 @@
       <iframe id="main" class="main-player" allowfullscreen></iframe>
       <iframe id="pip" class="pip-player" draggable="true" allowfullscreen></iframe>
       
-      <div class="swap-button" onclick="swapPlayers()" title="切換主畫面"></div>
+      <div class="swap-button" title="切換主畫面"></div>
       
       <div class="pip-hint" id="pip-hint">拖拽移動 • 長按切換 • 雙擊重置位置</div>
 
