@@ -623,30 +623,104 @@
 
 
 
-        // 改進的拖拽功能
-    let isDragging = false;
-    let dragOffsetX = 0;
-    let dragOffsetY = 0;
+        // Pip Player 拖拽功能 - 參考 Swap Button 實現
+    let isDraggingPip = false;
+    let pipOffsetX = 0;
+    let pipOffsetY = 0;
+    let pipMouseDownTimer = null;
     let longPressTimer = null;
-    let mouseDownTimer = null;
-    let isMouseDown = false;
 
     function setupPipDrag() {
       const pip = document.getElementById('pip');
       const videoArea = document.querySelector('.video-area');
+      if (!pip || !videoArea) return;
+
+      let clickTimeout = null;
+      let moveDistance = 0;
+      let startX = 0;
+      let startY = 0;
+      let isClick = false;
+
+      // 統一的開始事件處理
+      function handleStart(e) {
+        const clientX = e.clientX || e.touches[0].clientX;
+        const clientY = e.clientY || e.touches[0].clientY;
+        
+        startX = clientX;
+        startY = clientY;
+        moveDistance = 0;
+        isClick = true;
+        
+        const rect = pip.getBoundingClientRect();
+        pipOffsetX = clientX - rect.left;
+        pipOffsetY = clientY - rect.top;
+        
+        // 延遲開始拖拽
+        pipMouseDownTimer = setTimeout(() => {
+          if (isClick && moveDistance < 10) {
+            startPipDrag(e);
+          }
+        }, 150);
+        
+        e.preventDefault();
+      }
+
+      // 統一的移動事件處理
+      function handleMove(e) {
+        if (!isClick) return;
+        
+        const clientX = e.clientX || e.touches[0].clientX;
+        const clientY = e.clientY || e.touches[0].clientY;
+        
+        const deltaX = clientX - startX;
+        const deltaY = clientY - startY;
+        moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        if (moveDistance > 10) {
+          isClick = false;
+          if (pipMouseDownTimer) {
+            clearTimeout(pipMouseDownTimer);
+            pipMouseDownTimer = null;
+          }
+        }
+        
+        if (isDraggingPip) {
+          movePipPlayer(clientX, clientY);
+        }
+        
+        e.preventDefault();
+      }
+
+      // 統一的結束事件處理
+      function handleEnd(e) {
+        if (pipMouseDownTimer) {
+          clearTimeout(pipMouseDownTimer);
+          pipMouseDownTimer = null;
+        }
+        
+        if (isDraggingPip) {
+          endPipDrag();
+        } else if (isClick && moveDistance < 10) {
+          // 點擊切換（長按功能）
+          if (clickTimeout) clearTimeout(clickTimeout);
+          clickTimeout = setTimeout(() => {
+            swapPlayers();
+          }, 10);
+        }
+        
+        isClick = false;
+        moveDistance = 0;
+      }
+
+      // 滑鼠事件
+      pip.addEventListener('mousedown', handleStart);
+      document.addEventListener('mousemove', handleMove);
+      document.addEventListener('mouseup', handleEnd);
       
-      // 確保 iframe 可以被拖拽
-      pip.setAttribute('draggable', 'true');
-      
-      // 滑鼠事件處理
-      pip.addEventListener('mousedown', handleMouseDown);
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      
-      // 觸控事件處理
-      pip.addEventListener('touchstart', handleTouchStart, { passive: false });
-      document.addEventListener('touchmove', handleTouchMove, { passive: false });
-      document.addEventListener('touchend', handleTouchEnd);
+      // 觸控事件
+      pip.addEventListener('touchstart', handleStart, { passive: false });
+      document.addEventListener('touchmove', handleMove, { passive: false });
+      document.addEventListener('touchend', handleEnd);
       
       // 防止 iframe 內部的拖拽干擾
       pip.addEventListener('dragstart', (e) => {
@@ -654,129 +728,26 @@
         return false;
       });
       
-      // 長按切換功能
-      setupLongPress(pip);
-    }
-
-    function handleMouseDown(e) {
-      if (e.target.closest('iframe')) return;
+      // 雙擊重置位置
+      pip.addEventListener('dblclick', function(e) {
+        resetPipPosition();
+        e.preventDefault();
+      });
       
-      isMouseDown = true;
-      const pip = document.getElementById('pip');
-      const rect = pip.getBoundingClientRect();
-      dragOffsetX = e.clientX - rect.left;
-      dragOffsetY = e.clientY - rect.top;
-      
-      // 延遲開始拖拽，避免與點擊衝突
-      mouseDownTimer = setTimeout(() => {
-        if (isMouseDown) {
-          startDrag(e);
+      // 雙擊重置（觸控）
+      let lastTap = 0;
+      pip.addEventListener('touchend', function(e) {
+        const now = Date.now();
+        if (now - lastTap < 400 && !isDraggingPip) {
+          resetPipPosition();
+          e.preventDefault();
         }
-      }, 100);
-      
-      e.preventDefault();
+        lastTap = now;
+      });
     }
 
-    function handleMouseMove(e) {
-      if (!isDragging || !isMouseDown) return;
-      
-      const pip = document.getElementById('pip');
-      const videoArea = document.querySelector('.video-area');
-      const videoRect = videoArea.getBoundingClientRect();
-      
-      // 計算新位置
-      let newLeft = e.clientX - dragOffsetX - videoRect.left;
-      let newTop = e.clientY - dragOffsetY - videoRect.top;
-      
-      // 邊界限制
-      const margin = 10;
-      const maxLeft = videoRect.width - pip.offsetWidth - margin;
-      const maxTop = videoRect.height - pip.offsetHeight - margin;
-      
-      newLeft = Math.max(margin, Math.min(newLeft, maxLeft));
-      newTop = Math.max(margin, Math.min(newTop, maxTop));
-      
-      // 更新位置
-      pip.style.left = newLeft + 'px';
-      pip.style.top = newTop + 'px';
-      pip.style.right = 'auto';
-      pip.style.bottom = 'auto';
-      
-      e.preventDefault();
-    }
-
-    function handleMouseUp(e) {
-      if (mouseDownTimer) {
-        clearTimeout(mouseDownTimer);
-        mouseDownTimer = null;
-      }
-      
-      if (isDragging) {
-        endDrag();
-      }
-      
-      isMouseDown = false;
-    }
-
-    function handleTouchStart(e) {
-      if (e.touches.length !== 1) return;
-      
-      const touch = e.touches[0];
-      const pip = document.getElementById('pip');
-      const rect = pip.getBoundingClientRect();
-      dragOffsetX = touch.clientX - rect.left;
-      dragOffsetY = touch.clientY - rect.top;
-      
-      // 延遲開始拖拽
-      mouseDownTimer = setTimeout(() => {
-        startDrag(touch);
-      }, 100);
-      
-      e.preventDefault();
-    }
-
-    function handleTouchMove(e) {
-      if (!isDragging || e.touches.length !== 1) return;
-      
-      const touch = e.touches[0];
-      const pip = document.getElementById('pip');
-      const videoArea = document.querySelector('.video-area');
-      const videoRect = videoArea.getBoundingClientRect();
-      
-      // 計算新位置
-      let newLeft = touch.clientX - dragOffsetX - videoRect.left;
-      let newTop = touch.clientY - dragOffsetY - videoRect.top;
-      
-      // 邊界限制
-      const margin = 10;
-      const maxLeft = videoRect.width - pip.offsetWidth - margin;
-      const maxTop = videoRect.height - pip.offsetHeight - margin;
-      
-      newLeft = Math.max(margin, Math.min(newLeft, maxLeft));
-      newTop = Math.max(margin, Math.min(newTop, maxTop));
-      
-      // 更新位置
-      pip.style.left = newLeft + 'px';
-      pip.style.top = newTop + 'px';
-      pip.style.right = 'auto';
-      pip.style.bottom = 'auto';
-      
-      e.preventDefault();
-    }
-
-    function handleTouchEnd(e) {
-      if (mouseDownTimer) {
-        clearTimeout(mouseDownTimer);
-        mouseDownTimer = null;
-      }
-      
-      if (isDragging) {
-        endDrag();
-      }
-    }
-
-    function startDrag(e) {
-      isDragging = true;
+    function startPipDrag(e) {
+      isDraggingPip = true;
       const pip = document.getElementById('pip');
       
       // 視覺反饋
@@ -794,8 +765,8 @@
       }
     }
 
-    function endDrag() {
-      isDragging = false;
+    function endPipDrag() {
+      isDraggingPip = false;
       const pip = document.getElementById('pip');
       
       // 移除視覺反饋
@@ -823,55 +794,31 @@
       }, 200);
     }
 
-    function setupLongPress(pip) {
-      let longPressTimer = null;
+    function movePipPlayer(clientX, clientY) {
+      const pip = document.getElementById('pip');
+      const videoArea = document.querySelector('.video-area');
+      const videoRect = videoArea.getBoundingClientRect();
       
-      // 滑鼠長按
-      pip.addEventListener('mousedown', function(e) {
-        if (e.target.closest('iframe')) return;
-        
-        longPressTimer = setTimeout(() => {
-          if (!isDragging && !isMouseDown) {
-            pip.classList.add('drag-hint');
-            setTimeout(() => {
-              pip.classList.remove('drag-hint');
-              swapPlayers();
-            }, 200);
-          }
-        }, 600);
-      });
+      // 計算新位置
+      let newLeft = clientX - pipOffsetX - videoRect.left;
+      let newTop = clientY - pipOffsetY - videoRect.top;
       
-      pip.addEventListener('mouseup', function() {
-        if (longPressTimer) {
-          clearTimeout(longPressTimer);
-          longPressTimer = null;
-        }
-        pip.classList.remove('drag-hint');
-      });
+      // 邊界限制
+      const margin = 10;
+      const maxLeft = videoRect.width - pip.offsetWidth - margin;
+      const maxTop = videoRect.height - pip.offsetHeight - margin;
       
-      // 觸控長按
-      pip.addEventListener('touchstart', function(e) {
-        if (e.touches.length !== 1) return;
-        
-        longPressTimer = setTimeout(() => {
-          if (!isDragging) {
-            pip.classList.add('drag-hint');
-            setTimeout(() => {
-              pip.classList.remove('drag-hint');
-              swapPlayers();
-            }, 200);
-          }
-        }, 600);
-      });
+      newLeft = Math.max(margin, Math.min(newLeft, maxLeft));
+      newTop = Math.max(margin, Math.min(newTop, maxTop));
       
-      pip.addEventListener('touchend', function() {
-        if (longPressTimer) {
-          clearTimeout(longPressTimer);
-          longPressTimer = null;
-        }
-        pip.classList.remove('drag-hint');
-      });
+      // 更新位置
+      pip.style.left = newLeft + 'px';
+      pip.style.top = newTop + 'px';
+      pip.style.right = 'auto';
+      pip.style.bottom = 'auto';
     }
+
+
 
     // 取消預設行為
     function cancelDefault(e) {
@@ -1074,15 +1021,14 @@
         window.onload = function() {
       loadPlayers();
       setupPipDrag();
-      setupDoubleTapReset();
       setupKeyboardShortcuts();
       setupInstallGuide();
       updateVersionInfo();
       
       // 恢復小畫面位置
       restorePipPosition();
-      restoreSwapButtonPosition(); // <--- 新增
-      setupSwapButtonDrag();      // <--- 新增
+      restoreSwapButtonPosition();
+      setupSwapButtonDrag();
       
       // 顯示操作提示
       setTimeout(showPipHint, 1000);
@@ -1123,35 +1069,7 @@
       localStorage.removeItem('pipPosition');
     }
 
-    // 雙擊重置位置功能
-    function setupDoubleTapReset() {
-      const pip = document.getElementById('pip');
-      let lastTap = 0;
-      let lastClick = 0;
-      
-      // 觸控雙擊
-      pip.addEventListener('touchend', function(e) {
-        if (isDragging || isMouseDown) return;
-        
-        const currentTime = new Date().getTime();
-        const tapLength = currentTime - lastTap;
-        
-        if (tapLength < 500 && tapLength > 0) {
-          // 雙擊重置位置
-          resetPipPosition();
-          e.preventDefault();
-        }
-        lastTap = currentTime;
-      });
-      
-      // 滑鼠雙擊
-      pip.addEventListener('dblclick', function(e) {
-        if (!isDragging && !isMouseDown) {
-          resetPipPosition();
-          e.preventDefault();
-        }
-      });
-    }
+
 
     // 顯示操作提示
     function showPipHint() {
@@ -1170,7 +1088,7 @@
       const versionInfo = document.getElementById('version-info');
       if (versionInfo) {
         // 從 service worker 獲取版本號，如果無法獲取則使用預設值
-        const currentVersion = 'v1.7.6'; // 這裡應該與 service-worker.js 中的版本一致
+        const currentVersion = 'v1.8.0'; // 這裡應該與 service-worker.js 中的版本一致
         versionInfo.textContent = currentVersion;
         
         // 添加點擊事件來顯示詳細信息
@@ -1184,7 +1102,7 @@
 </head>
 <body>
     <div id="twitch-auth-bar" style="position:fixed;top:16px;right:16px;z-index:2000;"></div>
-  <div class="version-info" id="version-info">v1.7.6</div>
+  <div class="version-info" id="version-info">v1.8.0</div>
         <div class="video-area">
       <iframe id="main" class="main-player" allowfullscreen></iframe>
       <iframe id="pip" class="pip-player" draggable="true" allowfullscreen></iframe>
