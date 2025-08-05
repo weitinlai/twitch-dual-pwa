@@ -200,37 +200,31 @@
       position: absolute;
       top: 20px;
       right: 20px;
-      z-index: 10;
-      width: 50px;
-      height: 50px;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(20px);
-      border: 2px solid rgba(59, 130, 246, 0.6);
+      width: 48px;
+      height: 48px;
+      background: #222 linear-gradient(135deg, #9147ff 0%, #9147ff 100%);
       border-radius: 50%;
-      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+      border: 3px solid #fff3;
+      cursor: grab;
+      z-index: 20;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      transition: box-shadow 0.2s, transform 0.2s;
     }
-
-    .swap-button:hover {
-      background: rgba(59, 130, 246, 0.2);
-      border-color: #3B82F6;
-      transform: scale(1.1);
-      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+    .swap-button:active, .swap-button.dragging {
+      cursor: grabbing;
+      box-shadow: 0 4px 16px #9147ff55;
+      transform: scale(1.08);
     }
-
-    .swap-button:active {
-      transform: scale(0.95);
-    }
-
     .swap-button::before {
-      content: '⤢';
-      font-size: 16px;
-      font-weight: bold;
-      color: #3B82F6;
+      content: '';
+      display: block;
+      width: 24px;
+      height: 24px;
+      background: url('data:image/svg+xml;utf8,<svg fill="white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>') no-repeat center/contain;
+      opacity: 0.85;
     }
 
     /* 操作提示 */
@@ -856,6 +850,134 @@
       });
     }
 
+        // Swap button drag & drop
+(function() {
+  let isDraggingSwap = false;
+  let swapOffsetX = 0;
+  let swapOffsetY = 0;
+  let swapMouseDown = false;
+  let swapMouseDownTimer = null;
+
+  function setupSwapButtonDrag() {
+    const swap = document.querySelector('.swap-button');
+    const videoArea = document.querySelector('.video-area');
+    if (!swap || !videoArea) return;
+
+    // 滑鼠事件
+    swap.addEventListener('mousedown', function(e) {
+      swapMouseDown = true;
+      const rect = swap.getBoundingClientRect();
+      swapOffsetX = e.clientX - rect.left;
+      swapOffsetY = e.clientY - rect.top;
+      swapMouseDownTimer = setTimeout(() => {
+        if (swapMouseDown) startSwapDrag(e);
+      }, 80);
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e) {
+      if (!isDraggingSwap || !swapMouseDown) return;
+      moveSwapButton(e.clientX, e.clientY);
+      e.preventDefault();
+    });
+    document.addEventListener('mouseup', function(e) {
+      if (swapMouseDownTimer) clearTimeout(swapMouseDownTimer);
+      if (isDraggingSwap) endSwapDrag();
+      swapMouseDown = false;
+    });
+    // 觸控事件
+    swap.addEventListener('touchstart', function(e) {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      const rect = swap.getBoundingClientRect();
+      swapOffsetX = touch.clientX - rect.left;
+      swapOffsetY = touch.clientY - rect.top;
+      swapMouseDownTimer = setTimeout(() => {
+        startSwapDrag(touch);
+      }, 80);
+      e.preventDefault();
+    }, { passive: false });
+    document.addEventListener('touchmove', function(e) {
+      if (!isDraggingSwap || e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      moveSwapButton(touch.clientX, touch.clientY);
+      e.preventDefault();
+    }, { passive: false });
+    document.addEventListener('touchend', function(e) {
+      if (swapMouseDownTimer) clearTimeout(swapMouseDownTimer);
+      if (isDraggingSwap) endSwapDrag();
+    });
+    // 雙擊重置
+    swap.addEventListener('dblclick', function(e) {
+      resetSwapButtonPosition();
+      e.preventDefault();
+    });
+    swap.addEventListener('touchend', (function() {
+      let lastTap = 0;
+      return function(e) {
+        const now = Date.now();
+        if (now - lastTap < 400) {
+          resetSwapButtonPosition();
+          e.preventDefault();
+        }
+        lastTap = now;
+      }
+    })());
+  }
+  function startSwapDrag(e) {
+    isDraggingSwap = true;
+    document.body.classList.add('dragging');
+    document.querySelector('.swap-button').classList.add('dragging');
+  }
+  function endSwapDrag() {
+    isDraggingSwap = false;
+    document.body.classList.remove('dragging');
+    document.querySelector('.swap-button').classList.remove('dragging');
+    // 儲存位置
+    const swap = document.querySelector('.swap-button');
+    localStorage.setItem('swapButtonPosition', JSON.stringify({ left: swap.style.left, top: swap.style.top }));
+  }
+  function moveSwapButton(clientX, clientY) {
+    const swap = document.querySelector('.swap-button');
+    const videoArea = document.querySelector('.video-area');
+    const areaRect = videoArea.getBoundingClientRect();
+    const btnRect = swap.getBoundingClientRect();
+    const margin = 10;
+    let newLeft = clientX - swapOffsetX - areaRect.left;
+    let newTop = clientY - swapOffsetY - areaRect.top;
+    // 邊界
+    const maxLeft = areaRect.width - btnRect.width - margin;
+    const maxTop = areaRect.height - btnRect.height - margin;
+    newLeft = Math.max(margin, Math.min(newLeft, maxLeft));
+    newTop = Math.max(margin, Math.min(newTop, maxTop));
+    swap.style.left = newLeft + 'px';
+    swap.style.top = newTop + 'px';
+    swap.style.right = 'auto';
+    swap.style.bottom = 'auto';
+  }
+  window.restoreSwapButtonPosition = function() {
+    const swap = document.querySelector('.swap-button');
+    const pos = localStorage.getItem('swapButtonPosition');
+    if (swap && pos) {
+      try {
+        const p = JSON.parse(pos);
+        swap.style.left = p.left;
+        swap.style.top = p.top;
+        swap.style.right = 'auto';
+        swap.style.bottom = 'auto';
+      } catch {}
+    }
+  }
+  window.resetSwapButtonPosition = function() {
+    const swap = document.querySelector('.swap-button');
+    swap.style.left = 'auto';
+    swap.style.top = '20px';
+    swap.style.right = '20px';
+    swap.style.bottom = 'auto';
+    localStorage.removeItem('swapButtonPosition');
+  }
+  window.setupSwapButtonDrag = setupSwapButtonDrag;
+})();
+
         window.onload = function() {
       loadPlayers();
       setupPipDrag();
@@ -865,6 +987,8 @@
       
       // 恢復小畫面位置
       restorePipPosition();
+      restoreSwapButtonPosition(); // <--- 新增
+      setupSwapButtonDrag();      // <--- 新增
       
       // 顯示操作提示
       setTimeout(showPipHint, 1000);
