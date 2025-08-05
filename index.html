@@ -88,14 +88,39 @@
     }
 
     .pip-player.dragging {
-      transition: none;
+      transition: none !important;
       border-color: #3B82F6;
       box-shadow: 
         0 12px 40px rgba(0, 0, 0, 0.6),
         0 0 0 2px rgba(59, 130, 246, 0.5);
       transform: scale(1.05) rotate(2deg);
       z-index: 1000;
-      opacity: 0.8;
+      opacity: 0.9;
+      cursor: grabbing !important;
+    }
+
+    .pip-player.drag-hint {
+      animation: pulse 0.6s ease-in-out;
+      border-color: #10B981;
+      box-shadow: 
+        0 8px 32px rgba(16, 185, 129, 0.4),
+        0 0 0 2px rgba(16, 185, 129, 0.6);
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    body.dragging {
+      cursor: grabbing;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .video-area.drag-active {
+      background: rgba(59, 130, 246, 0.1);
+      border: 2px dashed rgba(59, 130, 246, 0.3);
     }
 
     .pip-player:hover {
@@ -554,92 +579,62 @@
 
 
 
-        // HTML5 Drag & Drop 功能 - 參考標準實現
+        // 改進的拖拽功能
     let isDragging = false;
     let dragOffsetX = 0;
     let dragOffsetY = 0;
     let longPressTimer = null;
+    let mouseDownTimer = null;
+    let isMouseDown = false;
 
     function setupPipDrag() {
       const pip = document.getElementById('pip');
       const videoArea = document.querySelector('.video-area');
       
-      // 設置拖拽源
-      pip.addEventListener('dragstart', dragStart);
-      pip.addEventListener('dragend', dragEnd);
+      // 確保 iframe 可以被拖拽
+      pip.setAttribute('draggable', 'true');
       
-      // 設置放置目標
-      videoArea.addEventListener('dragover', dragover);
-      videoArea.addEventListener('dragenter', cancelDefault);
-      videoArea.addEventListener('dragleave', dragLeave);
-      videoArea.addEventListener('drop', dropped);
+      // 滑鼠事件處理
+      pip.addEventListener('mousedown', handleMouseDown);
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      // 觸控事件處理
+      pip.addEventListener('touchstart', handleTouchStart, { passive: false });
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
+      
+      // 防止 iframe 內部的拖拽干擾
+      pip.addEventListener('dragstart', (e) => {
+        e.preventDefault();
+        return false;
+      });
       
       // 長按切換功能
       setupLongPress(pip);
     }
 
-    function dragStart(e) {
-      isDragging = true;
-      const rect = this.getBoundingClientRect();
+    function handleMouseDown(e) {
+      if (e.target.closest('iframe')) return;
+      
+      isMouseDown = true;
+      const pip = document.getElementById('pip');
+      const rect = pip.getBoundingClientRect();
       dragOffsetX = e.clientX - rect.left;
       dragOffsetY = e.clientY - rect.top;
       
-      // 設置拖拽數據
-      e.dataTransfer.setData('text/plain', this.id);
-      e.dataTransfer.effectAllowed = 'move';
+      // 延遲開始拖拽，避免與點擊衝突
+      mouseDownTimer = setTimeout(() => {
+        if (isMouseDown) {
+          startDrag(e);
+        }
+      }, 100);
       
-      // 設置拖拽圖像（使用元素本身）
-      e.dataTransfer.setDragImage(this, this.offsetWidth / 2, this.offsetHeight / 2);
-      
-      // 視覺反饋
-      this.classList.add('dragging');
-      document.body.classList.add('dragging');
-      
-      // 添加容器效果
-      const videoArea = document.querySelector('.video-area');
-      videoArea.classList.add('drag-active');
-      
-      // 清除長按計時器
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-      
-      cancelDefault(e);
+      e.preventDefault();
     }
 
-    function dragEnd(e) {
-      isDragging = false;
-      
-      // 移除視覺反饋
-      this.classList.remove('dragging');
-      document.body.classList.remove('dragging');
-      
-      // 移除容器效果
-      const videoArea = document.querySelector('.video-area');
-      videoArea.classList.remove('drag-active');
-      videoArea.classList.remove('hover');
-      
-      // 儲存位置
-      const left = this.style.left;
-      const top = this.style.top;
-      if (left && top) {
-        localStorage.setItem('pipPosition', JSON.stringify({ left, top }));
-      }
-      
-      // 完成動畫
-      this.style.transition = 'transform 0.2s ease';
-      this.style.transform = 'scale(1.02)';
-      setTimeout(() => {
-        this.style.transform = 'scale(1)';
-        this.style.transition = '';
-      }, 200);
-      
-      cancelDefault(e);
-    }
-
-    function dragover(e) {
-      if (!isDragging) return;
+    function handleMouseMove(e) {
+      if (!isDragging || !isMouseDown) return;
       
       const pip = document.getElementById('pip');
       const videoArea = document.querySelector('.video-area');
@@ -663,34 +658,136 @@
       pip.style.right = 'auto';
       pip.style.bottom = 'auto';
       
-      // 添加 hover 效果
-      videoArea.classList.add('hover');
-      
-      cancelDefault(e);
+      e.preventDefault();
     }
 
-    function dropped(e) {
-      cancelDefault(e);
-      
-      // 移除 hover 效果
-      e.currentTarget.classList.remove('hover');
-    }
-
-    function dragLeave(e) {
-      // 確保只有當真正離開放置區域時才移除 hover 效果
-      if (!e.currentTarget.contains(e.relatedTarget)) {
-        e.currentTarget.classList.remove('hover');
+    function handleMouseUp(e) {
+      if (mouseDownTimer) {
+        clearTimeout(mouseDownTimer);
+        mouseDownTimer = null;
       }
-      cancelDefault(e);
+      
+      if (isDragging) {
+        endDrag();
+      }
+      
+      isMouseDown = false;
+    }
+
+    function handleTouchStart(e) {
+      if (e.touches.length !== 1) return;
+      
+      const touch = e.touches[0];
+      const pip = document.getElementById('pip');
+      const rect = pip.getBoundingClientRect();
+      dragOffsetX = touch.clientX - rect.left;
+      dragOffsetY = touch.clientY - rect.top;
+      
+      // 延遲開始拖拽
+      mouseDownTimer = setTimeout(() => {
+        startDrag(touch);
+      }, 100);
+      
+      e.preventDefault();
+    }
+
+    function handleTouchMove(e) {
+      if (!isDragging || e.touches.length !== 1) return;
+      
+      const touch = e.touches[0];
+      const pip = document.getElementById('pip');
+      const videoArea = document.querySelector('.video-area');
+      const videoRect = videoArea.getBoundingClientRect();
+      
+      // 計算新位置
+      let newLeft = touch.clientX - dragOffsetX - videoRect.left;
+      let newTop = touch.clientY - dragOffsetY - videoRect.top;
+      
+      // 邊界限制
+      const margin = 10;
+      const maxLeft = videoRect.width - pip.offsetWidth - margin;
+      const maxTop = videoRect.height - pip.offsetHeight - margin;
+      
+      newLeft = Math.max(margin, Math.min(newLeft, maxLeft));
+      newTop = Math.max(margin, Math.min(newTop, maxTop));
+      
+      // 更新位置
+      pip.style.left = newLeft + 'px';
+      pip.style.top = newTop + 'px';
+      pip.style.right = 'auto';
+      pip.style.bottom = 'auto';
+      
+      e.preventDefault();
+    }
+
+    function handleTouchEnd(e) {
+      if (mouseDownTimer) {
+        clearTimeout(mouseDownTimer);
+        mouseDownTimer = null;
+      }
+      
+      if (isDragging) {
+        endDrag();
+      }
+    }
+
+    function startDrag(e) {
+      isDragging = true;
+      const pip = document.getElementById('pip');
+      
+      // 視覺反饋
+      pip.classList.add('dragging');
+      document.body.classList.add('dragging');
+      
+      // 添加容器效果
+      const videoArea = document.querySelector('.video-area');
+      videoArea.classList.add('drag-active');
+      
+      // 清除長按計時器
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    }
+
+    function endDrag() {
+      isDragging = false;
+      const pip = document.getElementById('pip');
+      
+      // 移除視覺反饋
+      pip.classList.remove('dragging');
+      document.body.classList.remove('dragging');
+      
+      // 移除容器效果
+      const videoArea = document.querySelector('.video-area');
+      videoArea.classList.remove('drag-active');
+      videoArea.classList.remove('hover');
+      
+      // 儲存位置
+      const left = pip.style.left;
+      const top = pip.style.top;
+      if (left && top) {
+        localStorage.setItem('pipPosition', JSON.stringify({ left, top }));
+      }
+      
+      // 完成動畫
+      pip.style.transition = 'transform 0.2s ease';
+      pip.style.transform = 'scale(1.02)';
+      setTimeout(() => {
+        pip.style.transform = 'scale(1)';
+        pip.style.transition = '';
+      }, 200);
     }
 
     function setupLongPress(pip) {
-      let mouseDownTimer;
+      let longPressTimer = null;
       
       // 滑鼠長按
       pip.addEventListener('mousedown', function(e) {
-        mouseDownTimer = setTimeout(() => {
-          if (!isDragging) {
+        if (e.target.closest('iframe')) return;
+        
+        longPressTimer = setTimeout(() => {
+          if (!isDragging && !isMouseDown) {
             pip.classList.add('drag-hint');
             setTimeout(() => {
               pip.classList.remove('drag-hint');
@@ -701,15 +798,17 @@
       });
       
       pip.addEventListener('mouseup', function() {
-        if (mouseDownTimer) {
-          clearTimeout(mouseDownTimer);
-          mouseDownTimer = null;
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
         }
         pip.classList.remove('drag-hint');
       });
       
       // 觸控長按
       pip.addEventListener('touchstart', function(e) {
+        if (e.touches.length !== 1) return;
+        
         longPressTimer = setTimeout(() => {
           if (!isDragging) {
             pip.classList.add('drag-hint');
@@ -814,10 +913,12 @@
       
       // 觸控雙擊
       pip.addEventListener('touchend', function(e) {
+        if (isDragging || isMouseDown) return;
+        
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
         
-        if (tapLength < 500 && tapLength > 0 && !isDragging) {
+        if (tapLength < 500 && tapLength > 0) {
           // 雙擊重置位置
           resetPipPosition();
           e.preventDefault();
@@ -827,7 +928,7 @@
       
       // 滑鼠雙擊
       pip.addEventListener('dblclick', function(e) {
-        if (!isDragging) {
+        if (!isDragging && !isMouseDown) {
           resetPipPosition();
           e.preventDefault();
         }
