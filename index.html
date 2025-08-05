@@ -277,6 +277,28 @@
       opacity: 1;
     }
 
+    /* 版本號顯示 */
+    .version-info {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      color: rgba(255, 255, 255, 0.8);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      z-index: 1000;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: opacity 0.3s ease;
+    }
+
+    .version-info:hover {
+      opacity: 1;
+      color: rgba(255, 255, 255, 1);
+    }
+
 
 
 
@@ -1055,6 +1077,7 @@
       setupDoubleTapReset();
       setupKeyboardShortcuts();
       setupInstallGuide();
+      updateVersionInfo();
       
       // 恢復小畫面位置
       restorePipPosition();
@@ -1141,11 +1164,28 @@
         }, 3000);
       }
     }
+
+    // 更新版本號顯示
+    function updateVersionInfo() {
+      const versionInfo = document.getElementById('version-info');
+      if (versionInfo) {
+        // 從 service worker 獲取版本號，如果無法獲取則使用預設值
+        const currentVersion = 'v1.7.6'; // 這裡應該與 service-worker.js 中的版本一致
+        versionInfo.textContent = currentVersion;
+        
+        // 添加點擊事件來顯示詳細信息
+        versionInfo.addEventListener('click', function() {
+          const info = `版本: ${currentVersion}\n更新時間: ${new Date().toLocaleString()}\n用戶代理: ${navigator.userAgent.substring(0, 50)}...`;
+          alert(info);
+        });
+      }
+    }
   </script>
 </head>
 <body>
-  <div id="twitch-auth-bar" style="position:fixed;top:16px;right:16px;z-index:2000;"></div>
-      <div class="video-area">
+    <div id="twitch-auth-bar" style="position:fixed;top:16px;right:16px;z-index:2000;"></div>
+  <div class="version-info" id="version-info">v1.7.6</div>
+        <div class="video-area">
       <iframe id="main" class="main-player" allowfullscreen></iframe>
       <iframe id="pip" class="pip-player" draggable="true" allowfullscreen></iframe>
       
