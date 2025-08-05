@@ -883,7 +883,6 @@
   let isDraggingSwap = false;
   let swapOffsetX = 0;
   let swapOffsetY = 0;
-  let swapMouseDown = false;
   let swapMouseDownTimer = null;
 
   function setupSwapButtonDrag() {
@@ -892,68 +891,108 @@
     if (!swap || !videoArea) return;
 
     let clickTimeout = null;
+    let moveDistance = 0;
+    let startX = 0;
+    let startY = 0;
+    let isClick = false;
 
-    // 滑鼠事件
-    swap.addEventListener('mousedown', function(e) {
-      swapMouseDown = true;
+    // 統一的開始事件處理
+    function handleStart(e) {
+      const clientX = e.clientX || e.touches[0].clientX;
+      const clientY = e.clientY || e.touches[0].clientY;
+      
+      startX = clientX;
+      startY = clientY;
+      moveDistance = 0;
+      isClick = true;
+      
       const rect = swap.getBoundingClientRect();
-      swapOffsetX = e.clientX - rect.left;
-      swapOffsetY = e.clientY - rect.top;
+      swapOffsetX = clientX - rect.left;
+      swapOffsetY = clientY - rect.top;
+      
+      // 延遲開始拖拽
       swapMouseDownTimer = setTimeout(() => {
-        if (swapMouseDown) startSwapDrag(e);
-      }, 80);
+        if (isClick && moveDistance < 10) {
+          startSwapDrag(e);
+        }
+      }, 150);
+      
       e.preventDefault();
-    });
-    document.addEventListener('mouseup', function(e) {
-      if (swapMouseDownTimer) clearTimeout(swapMouseDownTimer);
-      if (isDraggingSwap) endSwapDrag();
-      else if (swapMouseDown) {
-        // 只有沒拖曳才交換
+    }
+
+    // 統一的移動事件處理
+    function handleMove(e) {
+      if (!isClick) return;
+      
+      const clientX = e.clientX || e.touches[0].clientX;
+      const clientY = e.clientY || e.touches[0].clientY;
+      
+      const deltaX = clientX - startX;
+      const deltaY = clientY - startY;
+      moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      
+      if (moveDistance > 10) {
+        isClick = false;
+        if (swapMouseDownTimer) {
+          clearTimeout(swapMouseDownTimer);
+          swapMouseDownTimer = null;
+        }
+      }
+      
+      if (isDraggingSwap) {
+        moveSwapButton(clientX, clientY);
+      }
+      
+      e.preventDefault();
+    }
+
+    // 統一的結束事件處理
+    function handleEnd(e) {
+      if (swapMouseDownTimer) {
+        clearTimeout(swapMouseDownTimer);
+        swapMouseDownTimer = null;
+      }
+      
+      if (isDraggingSwap) {
+        endSwapDrag();
+      } else if (isClick && moveDistance < 10) {
+        // 點擊切換
         if (clickTimeout) clearTimeout(clickTimeout);
         clickTimeout = setTimeout(() => {
           swapPlayers();
         }, 10);
       }
-      swapMouseDown = false;
-    });
+      
+      isClick = false;
+      moveDistance = 0;
+    }
+
+    // 滑鼠事件
+    swap.addEventListener('mousedown', handleStart);
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleEnd);
+    
     // 觸控事件
-    swap.addEventListener('touchstart', function(e) {
-      if (e.touches.length !== 1) return;
-      const touch = e.touches[0];
-      const rect = swap.getBoundingClientRect();
-      swapOffsetX = touch.clientX - rect.left;
-      swapOffsetY = touch.clientY - rect.top;
-      swapMouseDownTimer = setTimeout(() => {
-        startSwapDrag(touch);
-      }, 80);
-      e.preventDefault();
-    }, { passive: false });
-    document.addEventListener('touchmove', function(e) {
-      if (!isDraggingSwap || e.touches.length !== 1) return;
-      const touch = e.touches[0];
-      moveSwapButton(touch.clientX, touch.clientY);
-      e.preventDefault();
-    }, { passive: false });
-    document.addEventListener('touchend', function(e) {
-      if (swapMouseDownTimer) clearTimeout(swapMouseDownTimer);
-      if (isDraggingSwap) endSwapDrag();
-    });
-    // 雙擊重置
+    swap.addEventListener('touchstart', handleStart, { passive: false });
+    document.addEventListener('touchmove', handleMove, { passive: false });
+    document.addEventListener('touchend', handleEnd);
+    
+    // 雙擊重置（桌面）
     swap.addEventListener('dblclick', function(e) {
       resetSwapButtonPosition();
       e.preventDefault();
     });
-    swap.addEventListener('touchend', (function() {
-      let lastTap = 0;
-      return function(e) {
-        const now = Date.now();
-        if (now - lastTap < 400) {
-          resetSwapButtonPosition();
-          e.preventDefault();
-        }
-        lastTap = now;
+    
+    // 雙擊重置（觸控）
+    let lastTap = 0;
+    swap.addEventListener('touchend', function(e) {
+      const now = Date.now();
+      if (now - lastTap < 400 && !isDraggingSwap) {
+        resetSwapButtonPosition();
+        e.preventDefault();
       }
-    })());
+      lastTap = now;
+    });
   }
   function startSwapDrag(e) {
     isDraggingSwap = true;
