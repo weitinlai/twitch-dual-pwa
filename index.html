@@ -713,7 +713,6 @@
 
       // 拖拽狀態變量
       let isDragging = false;
-      let longPressTimer = null;
 
       // 防止 iframe 干擾拖拽
       if (pipIframe) {
@@ -749,11 +748,14 @@
       let startY = 0;
       let offsetX = 0;
       let offsetY = 0;
+      let hasMoved = false;
+      let clickTimer = null;
 
       // 滑鼠拖拽
       pipContainer.addEventListener('mousedown', function(e) {
         console.log('Safari mousedown');
         isDragging = true;
+        hasMoved = false;
         startX = e.clientX;
         startY = e.clientY;
         
@@ -764,6 +766,14 @@
         pipContainer.classList.add('dragging');
         e.preventDefault();
         
+        // 設置點擊計時器
+        clickTimer = setTimeout(() => {
+          if (!hasMoved) {
+            console.log('Safari click detected - swapping players');
+            swapPlayers();
+          }
+        }, 200);
+        
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
       });
@@ -772,6 +782,7 @@
       pipContainer.addEventListener('touchstart', function(e) {
         console.log('Safari touchstart');
         isDragging = true;
+        hasMoved = false;
         const touch = e.touches[0];
         startX = touch.clientX;
         startY = touch.clientY;
@@ -782,6 +793,14 @@
         
         pipContainer.classList.add('dragging');
         e.preventDefault();
+        
+        // 設置點擊計時器
+        clickTimer = setTimeout(() => {
+          if (!hasMoved) {
+            console.log('Safari touch click detected - swapping players');
+            swapPlayers();
+          }
+        }, 200);
       }, { passive: false });
 
       pipContainer.addEventListener('touchmove', function(e) {
@@ -789,6 +808,18 @@
         console.log('Safari touchmove');
         
         const touch = e.touches[0];
+        const deltaX = Math.abs(touch.clientX - startX);
+        const deltaY = Math.abs(touch.clientY - startY);
+        
+        // 如果移動距離超過閾值，則認為是拖拽
+        if (deltaX > 5 || deltaY > 5) {
+          hasMoved = true;
+          if (clickTimer) {
+            clearTimeout(clickTimer);
+            clickTimer = null;
+          }
+        }
+        
         const x = touch.clientX - offsetX;
         const y = touch.clientY - offsetY;
         
@@ -800,11 +831,29 @@
         console.log('Safari touchend');
         isDragging = false;
         pipContainer.classList.remove('dragging');
+        
+        // 清除點擊計時器
+        if (clickTimer) {
+          clearTimeout(clickTimer);
+          clickTimer = null;
+        }
       });
 
       function handleMouseMove(e) {
         if (!isDragging) return;
         console.log('Safari mousemove');
+        
+        const deltaX = Math.abs(e.clientX - startX);
+        const deltaY = Math.abs(e.clientY - startY);
+        
+        // 如果移動距離超過閾值，則認為是拖拽
+        if (deltaX > 5 || deltaY > 5) {
+          hasMoved = true;
+          if (clickTimer) {
+            clearTimeout(clickTimer);
+            clickTimer = null;
+          }
+        }
         
         const x = e.clientX - offsetX;
         const y = e.clientY - offsetY;
@@ -816,6 +865,13 @@
         console.log('Safari mouseup');
         isDragging = false;
         pipContainer.classList.remove('dragging');
+        
+        // 清除點擊計時器
+        if (clickTimer) {
+          clearTimeout(clickTimer);
+          clickTimer = null;
+        }
+        
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
       }
@@ -854,12 +910,6 @@
         console.log('Standard dragstart triggered');
         isDragging = true; // 設置拖拽標誌
         
-        // 清除長按計時器
-        if (longPressTimer) {
-          clearTimeout(longPressTimer);
-          longPressTimer = null;
-        }
-        
         e.dataTransfer.setData('text/plain', 'pip-container');
         e.dataTransfer.effectAllowed = 'move';
         pipContainer.classList.add('dragging');
@@ -883,7 +933,6 @@
       pipContainer.addEventListener('dragend', function(e) {
         console.log('Pip dragend');
         isDragging = false; // 重置拖拽標誌
-        pipContainer.classList.remove('dragging');
         videoArea.classList.remove('drag-over');
         
         // 如果沒有觸發 drop 事件，則在 dragend 時處理位置更新
@@ -929,6 +978,11 @@
           delete pipContainer._dragStartX;
           delete pipContainer._dragStartY;
         }
+        
+        // 延遲移除拖拽狀態，確保點擊事件不會觸發
+        setTimeout(() => {
+          pipContainer.classList.remove('dragging');
+        }, 100);
       });
 
       // 拖拽懸停
@@ -1028,7 +1082,7 @@
         e.preventDefault();
       });
 
-      // 單擊切換（備用功能）
+      // 單擊切換功能 - 簡化版本，避免與HTML5拖拽衝突
       pipContainer.addEventListener('click', function(e) {
         // 只有在沒有拖拽的情況下才觸發
         if (!pipContainer.classList.contains('dragging')) {
@@ -1037,43 +1091,7 @@
         }
       });
       
-      // 長按切換功能 - 只在非拖拽時觸發
-      pipContainer.addEventListener('mousedown', function(e) {
-        if (!isDragging) {
-          longPressTimer = setTimeout(() => {
-            if (!isDragging) {
-              console.log('Long press detected');
-              swapPlayers();
-            }
-          }, 500);
-        }
-      });
-      
-      pipContainer.addEventListener('mouseup', function(e) {
-        if (longPressTimer) {
-          clearTimeout(longPressTimer);
-          longPressTimer = null;
-        }
-      });
-      
-      // 觸控長按 - 只在非拖拽時觸發
-      pipContainer.addEventListener('touchstart', function(e) {
-        if (!isDragging) {
-          longPressTimer = setTimeout(() => {
-            if (!isDragging) {
-              console.log('Touch long press detected');
-              swapPlayers();
-            }
-          }, 500);
-        }
-      });
-      
-      pipContainer.addEventListener('touchend', function(e) {
-        if (longPressTimer) {
-          clearTimeout(longPressTimer);
-          longPressTimer = null;
-        }
-      });
+
 
       // 測試拖拽是否工作
       console.log('Pip drag setup complete. Testing...');
