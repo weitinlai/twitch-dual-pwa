@@ -688,7 +688,7 @@
 
 
 
-                // HTML5 拖拽功能
+                // HTML5 拖拽功能 - Safari 優化版本
     function setupPipDrag() {
       const pipContainer = document.querySelector('.pip-container');
       const videoArea = document.querySelector('.video-area');
@@ -700,6 +700,12 @@
       }
 
       console.log('Setting up pip drag...');
+
+      // 檢測瀏覽器
+      const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      
+      console.log('Browser detection:', { isSafari, isIOS });
 
       // 設置為可拖拽
       pipContainer.setAttribute('draggable', 'true');
@@ -726,9 +732,126 @@
         });
       }
 
+      // Safari 專用的拖拽實現
+      if (isSafari || isIOS) {
+        console.log('Using Safari-optimized drag implementation');
+        setupSafariDrag(pipContainer, videoArea);
+      } else {
+        console.log('Using standard HTML5 drag implementation');
+        setupStandardDrag(pipContainer, videoArea);
+      }
+    }
+
+    // Safari 專用的拖拽實現
+    function setupSafariDrag(pipContainer, videoArea) {
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      // 滑鼠拖拽
+      pipContainer.addEventListener('mousedown', function(e) {
+        console.log('Safari mousedown');
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        const rect = pipContainer.getBoundingClientRect();
+        offsetX = startX - rect.left;
+        offsetY = startY - rect.top;
+        
+        pipContainer.classList.add('dragging');
+        e.preventDefault();
+        
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+      });
+
+      // 觸控拖拽
+      pipContainer.addEventListener('touchstart', function(e) {
+        console.log('Safari touchstart');
+        isDragging = true;
+        const touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        
+        const rect = pipContainer.getBoundingClientRect();
+        offsetX = startX - rect.left;
+        offsetY = startY - rect.top;
+        
+        pipContainer.classList.add('dragging');
+        e.preventDefault();
+      }, { passive: false });
+
+      pipContainer.addEventListener('touchmove', function(e) {
+        if (!isDragging) return;
+        console.log('Safari touchmove');
+        
+        const touch = e.touches[0];
+        const x = touch.clientX - offsetX;
+        const y = touch.clientY - offsetY;
+        
+        updatePipPosition(x, y, videoArea, pipContainer);
+        e.preventDefault();
+      }, { passive: false });
+
+      pipContainer.addEventListener('touchend', function(e) {
+        console.log('Safari touchend');
+        isDragging = false;
+        pipContainer.classList.remove('dragging');
+      });
+
+      function handleMouseMove(e) {
+        if (!isDragging) return;
+        console.log('Safari mousemove');
+        
+        const x = e.clientX - offsetX;
+        const y = e.clientY - offsetY;
+        
+        updatePipPosition(x, y, videoArea, pipContainer);
+      }
+
+      function handleMouseUp(e) {
+        console.log('Safari mouseup');
+        isDragging = false;
+        pipContainer.classList.remove('dragging');
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      }
+    }
+
+    // 更新 pip 位置的通用函數
+    function updatePipPosition(x, y, videoArea, pipContainer) {
+      const rect = videoArea.getBoundingClientRect();
+      
+      // 邊界限制
+      const margin = 10;
+      const maxX = rect.width - pipContainer.offsetWidth - margin;
+      const maxY = rect.height - pipContainer.offsetHeight - margin;
+      
+      const newX = Math.max(margin, Math.min(x, maxX));
+      const newY = Math.max(margin, Math.min(y, maxY));
+      
+      // 更新位置
+      pipContainer.style.left = newX + 'px';
+      pipContainer.style.top = newY + 'px';
+      pipContainer.style.right = 'auto';
+      pipContainer.style.bottom = 'auto';
+      
+      // 儲存位置
+      localStorage.setItem('pipPosition', JSON.stringify({ 
+        left: newX + 'px', 
+        top: newY + 'px' 
+      }));
+    }
+
+    // 標準 HTML5 拖拽實現
+    function setupStandardDrag(pipContainer, videoArea) {
+
       // 拖拽開始
       pipContainer.addEventListener('dragstart', function(e) {
-        console.log('Pip dragstart triggered');
+        console.log('Standard dragstart triggered');
         isDragging = true; // 設置拖拽標誌
         
         // 清除長按計時器
@@ -995,19 +1118,140 @@
     }
 
     // HTML5 Swap button drag & drop
-    function setupSwapButtonDrag() {
-      const swap = document.querySelector('.swap-button');
-      const videoArea = document.querySelector('.video-area');
+      function setupSwapButtonDrag() {
+    const swap = document.querySelector('.swap-button');
+    const videoArea = document.querySelector('.video-area');
+    
+    if (!swap || !videoArea) {
+      console.error('Swap button drag setup failed: missing elements');
+      return;
+    }
+
+    console.log('Setting up swap button drag...');
+
+    // 檢測瀏覽器
+    const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    // 設置為可拖拽
+    swap.setAttribute('draggable', 'true');
+
+    // Safari 專用的拖拽實現
+    if (isSafari || isIOS) {
+      console.log('Using Safari-optimized swap button drag');
+      setupSafariSwapDrag(swap, videoArea);
+    } else {
+      console.log('Using standard HTML5 swap button drag');
+      setupStandardSwapDrag(swap, videoArea);
+    }
+  }
+
+  // Safari 專用的 swap button 拖拽實現
+  function setupSafariSwapDrag(swap, videoArea) {
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    // 滑鼠拖拽
+    swap.addEventListener('mousedown', function(e) {
+      console.log('Safari swap mousedown');
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
       
-      if (!swap || !videoArea) {
-        console.error('Swap button drag setup failed: missing elements');
-        return;
-      }
+      const rect = swap.getBoundingClientRect();
+      offsetX = startX - rect.left;
+      offsetY = startY - rect.top;
+      
+      swap.classList.add('dragging');
+      e.preventDefault();
+      
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    });
 
-      console.log('Setting up swap button drag...');
+    // 觸控拖拽
+    swap.addEventListener('touchstart', function(e) {
+      console.log('Safari swap touchstart');
+      isDragging = true;
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      
+      const rect = swap.getBoundingClientRect();
+      offsetX = startX - rect.left;
+      offsetY = startY - rect.top;
+      
+      swap.classList.add('dragging');
+      e.preventDefault();
+    }, { passive: false });
 
-      // 設置為可拖拽
-      swap.setAttribute('draggable', 'true');
+    swap.addEventListener('touchmove', function(e) {
+      if (!isDragging) return;
+      console.log('Safari swap touchmove');
+      
+      const touch = e.touches[0];
+      const x = touch.clientX - offsetX;
+      const y = touch.clientY - offsetY;
+      
+      updateSwapPosition(x, y, videoArea, swap);
+      e.preventDefault();
+    }, { passive: false });
+
+    swap.addEventListener('touchend', function(e) {
+      console.log('Safari swap touchend');
+      isDragging = false;
+      swap.classList.remove('dragging');
+    });
+
+    function handleMouseMove(e) {
+      if (!isDragging) return;
+      console.log('Safari swap mousemove');
+      
+      const x = e.clientX - offsetX;
+      const y = e.clientY - offsetY;
+      
+      updateSwapPosition(x, y, videoArea, swap);
+    }
+
+    function handleMouseUp(e) {
+      console.log('Safari swap mouseup');
+      isDragging = false;
+      swap.classList.remove('dragging');
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    }
+  }
+
+  // 更新 swap button 位置的通用函數
+  function updateSwapPosition(x, y, videoArea, swap) {
+    const rect = videoArea.getBoundingClientRect();
+    
+    // 邊界限制
+    const margin = 10;
+    const maxX = rect.width - swap.offsetWidth - margin;
+    const maxY = rect.height - swap.offsetHeight - margin;
+    
+    const newX = Math.max(margin, Math.min(x, maxX));
+    const newY = Math.max(margin, Math.min(y, maxY));
+    
+    // 更新位置
+    swap.style.left = newX + 'px';
+    swap.style.top = newY + 'px';
+    swap.style.right = 'auto';
+    swap.style.bottom = 'auto';
+    
+    // 儲存位置
+    localStorage.setItem('swapButtonPosition', JSON.stringify({ 
+      left: newX + 'px', 
+      top: newY + 'px' 
+    }));
+  }
+
+  // 標準 HTML5 swap button 拖拽實現
+  function setupStandardSwapDrag(swap, videoArea) {
 
       // 拖拽開始
       swap.addEventListener('dragstart', function(e) {
