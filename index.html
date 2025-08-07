@@ -1698,11 +1698,20 @@ window.onload = () => {
     }, { passive: false });
   }
   
-  // 自動偵測 iOS Safari，第一次進入顯示提示
+  // 自動偵測 iOS Safari，從瀏覽器開啟時顯示安裝提示
   const isInStandalone = window.matchMedia('(display-mode: standalone)').matches;
+  const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
+  
   if (isIOS && !isInStandalone && !localStorage.getItem('installPromptShown')) {
-    setTimeout(showInstallGuide, 2000);
-    localStorage.setItem('installPromptShown', '1');
+    console.log('iOS device detected, showing install prompt');
+    console.log('Is standalone:', isInStandalone);
+    console.log('Is Safari:', isSafari);
+    
+    // 延遲顯示安裝提示
+    setTimeout(() => {
+      showInstallGuide();
+      localStorage.setItem('installPromptShown', '1');
+    }, 3000);
   }
 };
 
