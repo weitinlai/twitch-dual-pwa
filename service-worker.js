@@ -1,5 +1,5 @@
 // Service Worker 版本號
-const CACHE_VERSION = 'v1.9.1';
+const CACHE_VERSION = 'v1.9.2';
 const CACHE_NAME = `twitch-pwa-${CACHE_VERSION}`;
 
 // 需要快取的檔案列表
