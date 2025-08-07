@@ -1718,20 +1718,13 @@ window.onload = () => {
   console.log('Is Safari:', isSafari);
   console.log('Already shown:', localStorage.getItem('installPromptShown'));
   
-  // 測試模式：在所有平台上顯示安裝提示
-  console.log('=== INSTALL PROMPT TEST ===');
-  console.log('Testing install prompt on all platforms...');
-  console.log('User Agent:', navigator.userAgent);
-  console.log('Platform:', navigator.platform);
+  // iPhone安裝提示邏輯
+  console.log('Install prompt check:');
+  console.log('Is iOS:', isIOS);
+  console.log('Is standalone:', isInStandalone);
+  console.log('Is Safari:', isSafari);
+  console.log('Already shown:', localStorage.getItem('installPromptShown'));
   
-  setTimeout(() => {
-    console.log('Attempting to show install guide...');
-    showInstallGuide();
-    console.log('Install guide function called');
-  }, 2000);
-  
-  // 原本的邏輯（暫時註解）
-  /*
   if (isIOS && !isInStandalone && !localStorage.getItem('installPromptShown')) {
     console.log('iOS device detected, showing install prompt');
     
@@ -1743,15 +1736,7 @@ window.onload = () => {
     }, 3000);
   } else {
     console.log('Install prompt conditions not met');
-    // 測試用：強制顯示安裝提示
-    if (isIOS) {
-      console.log('Forcing install prompt for testing...');
-      setTimeout(() => {
-        showInstallGuide();
-      }, 1000);
-    }
   }
-  */
 };
 
     function restorePipPosition() {
