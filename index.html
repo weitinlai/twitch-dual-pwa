@@ -227,6 +227,7 @@
       border: none;
       background: transparent;
       pointer-events: auto;
+      backdrop-filter: blur(5px);
     }
 
     .swap-button {
@@ -519,8 +520,8 @@
         right: 0;
         bottom: 0;
         z-index: 2000;
-        background: rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(10px);
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(15px);
         border-radius: 20px 20px 0 0;
         border: none;
         margin: 0;
@@ -598,6 +599,17 @@
         
         .mobile-chat-container {
           padding-bottom: max(20px, env(safe-area-inset-bottom) + 20px);
+        }
+        
+        /* iPhone 專用透明聊天背景 */
+        .chat-area.show iframe.chat {
+          background: transparent !important;
+          backdrop-filter: blur(10px);
+        }
+        
+        .chat-area.show {
+          background: rgba(0, 0, 0, 0.3) !important;
+          backdrop-filter: blur(15px);
         }
       }
     }
