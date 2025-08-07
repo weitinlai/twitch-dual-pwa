@@ -907,7 +907,14 @@
     }
 
     function showInstallGuide() {
-      document.getElementById('install-guide').style.display = 'flex';
+      console.log('showInstallGuide called');
+      const installGuide = document.getElementById('install-guide');
+      if (installGuide) {
+        console.log('Install guide element found, showing...');
+        installGuide.style.display = 'flex';
+      } else {
+        console.error('Install guide element not found!');
+      }
     }
 
     function hideInstallGuide() {
@@ -1702,16 +1709,23 @@ window.onload = () => {
   const isInStandalone = window.matchMedia('(display-mode: standalone)').matches;
   const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
   
+  console.log('Install prompt check:');
+  console.log('Is iOS:', isIOS);
+  console.log('Is standalone:', isInStandalone);
+  console.log('Is Safari:', isSafari);
+  console.log('Already shown:', localStorage.getItem('installPromptShown'));
+  
   if (isIOS && !isInStandalone && !localStorage.getItem('installPromptShown')) {
     console.log('iOS device detected, showing install prompt');
-    console.log('Is standalone:', isInStandalone);
-    console.log('Is Safari:', isSafari);
     
     // 延遲顯示安裝提示
     setTimeout(() => {
+      console.log('Showing install guide...');
       showInstallGuide();
       localStorage.setItem('installPromptShown', '1');
     }, 3000);
+  } else {
+    console.log('Install prompt conditions not met');
   }
 };
 
