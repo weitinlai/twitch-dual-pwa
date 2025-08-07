@@ -582,6 +582,93 @@
         touch-action: manipulation;
       }
       
+      /* Portrait模式：並列布局 */
+      @media (orientation: portrait) and (max-width: 768px) {
+        .video-area {
+          flex-direction: column !important;
+          height: 100vh !important;
+          display: flex !important;
+          position: relative !important;
+        }
+        
+        .main-player {
+          height: 50vh !important;
+          width: 100% !important;
+          border-radius: 0 !important;
+          order: 1 !important;
+          position: relative !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: auto !important;
+          margin: 0 !important;
+          flex: 0 0 50vh !important;
+        }
+        
+        .pip-container {
+          position: relative !important;
+          width: 100% !important;
+          height: 50vh !important;
+          bottom: auto !important;
+          right: auto !important;
+          left: auto !important;
+          top: auto !important;
+          border: none !important;
+          box-shadow: none !important;
+          border-radius: 0 !important;
+          margin: 0 !important;
+          order: 2 !important;
+          flex: 0 0 50vh !important;
+          z-index: 1 !important;
+        }
+        
+        .pip-player {
+          width: 100% !important;
+          height: 100% !important;
+          border-radius: 0 !important;
+          position: relative !important;
+        }
+        
+        /* 隱藏swap按鈕，因為現在是並列布局 */
+        .swap-button {
+          display: none !important;
+        }
+      }
+      
+      /* Landscape模式：保持PIP布局 */
+      @media (orientation: landscape) and (max-width: 768px) {
+        .video-area {
+          flex-direction: row;
+        }
+        
+        .main-player {
+          height: 100%;
+          width: 100%;
+        }
+        
+        .pip-container {
+          position: absolute !important;
+          width: 35% !important;
+          height: 25% !important;
+          bottom: 10px !important;
+          right: 10px !important;
+          border: 3px solid rgba(59, 130, 246, 0.8) !important;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+          border-radius: 8px !important;
+        }
+        
+        .pip-player {
+          width: 100% !important;
+          height: 100% !important;
+          border-radius: 8px !important;
+        }
+        
+        /* 顯示swap按鈕 */
+        .swap-button {
+          display: flex !important;
+        }
+      }
+      
       /* iPhone 安全區域支援 */
       @supports (padding: max(0px)) {
         .video-area {
@@ -1706,6 +1793,14 @@ window.onload = () => {
         chatArea.classList.add('show');
         document.body.classList.add('chat-open');
         chatButton.style.display = 'none'; // 隱藏按鈕
+      });
+      
+      // 監聽螢幕方向變化
+      window.addEventListener('orientationchange', function() {
+        // 延遲一下讓CSS重新計算
+        setTimeout(() => {
+          console.log('Orientation changed, current orientation:', window.orientation);
+        }, 100);
       });
 
       // 點擊聊天區域關閉
