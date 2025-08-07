@@ -485,162 +485,7 @@
       box-shadow: 0 6px 25px rgba(59, 130, 246, 0.6);
     }
 
-    .mobile-chat-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(10px);
-      z-index: 2000;
-      animation: fadeIn 0.3s ease;
-    }
 
-    .mobile-chat-container {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(20px);
-      border-top: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 20px 20px 0 0;
-      padding: 20px;
-      max-height: 60vh;
-      display: flex;
-      flex-direction: column;
-      animation: slideUp 0.3s ease;
-    }
-
-    @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
-    }
-
-    .mobile-chat-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .mobile-chat-title {
-      color: white;
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    .mobile-chat-close {
-      background: none;
-      border: none;
-      color: rgba(255, 255, 255, 0.7);
-      font-size: 24px;
-      cursor: pointer;
-      padding: 5px;
-      border-radius: 50%;
-      transition: all 0.2s ease;
-    }
-
-    .mobile-chat-close:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
-    }
-
-    .mobile-chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      margin-bottom: 15px;
-      max-height: 300px;
-      padding-right: 10px;
-    }
-
-    .mobile-chat-message {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 10px 12px;
-      margin-bottom: 8px;
-      border-left: 3px solid #3B82F6;
-      animation: messageSlideIn 0.3s ease;
-    }
-
-    @keyframes messageSlideIn {
-      from { 
-        opacity: 0;
-        transform: translateX(-20px);
-      }
-      to { 
-        opacity: 1;
-        transform: translateX(0);
-      }
-    }
-
-    .mobile-chat-username {
-      color: #3B82F6;
-      font-weight: 600;
-      font-size: 14px;
-      margin-bottom: 4px;
-    }
-
-    .mobile-chat-text {
-      color: white;
-      font-size: 14px;
-      line-height: 1.4;
-      word-wrap: break-word;
-    }
-
-    .mobile-chat-input-container {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .mobile-chat-input {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 20px;
-      padding: 12px 16px;
-      color: white;
-      font-size: 14px;
-      outline: none;
-      transition: all 0.3s ease;
-    }
-
-    .mobile-chat-input::placeholder {
-      color: rgba(255, 255, 255, 0.5);
-    }
-
-    .mobile-chat-input:focus {
-      border-color: #3B82F6;
-      background: rgba(255, 255, 255, 0.15);
-    }
-
-    .mobile-chat-send {
-      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-      border: none;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .mobile-chat-send:hover {
-      transform: scale(1.1);
-    }
-
-    .mobile-chat-send::before {
-      content: '➤';
-    }
 
     /* 響應式設計 */
     @media (max-width: 768px) {
@@ -663,6 +508,27 @@
       
       .mobile-chat-button {
         display: block; /* 在手機上顯示浮動聊天按鈕 */
+      }
+      
+      /* 當聊天區域顯示時的樣式 */
+      .chat-area.show {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 2000;
+        background: rgba(0, 0, 0, 0.95);
+        border-radius: 0;
+        border: none;
+        margin: 0;
+      }
+      
+      .chat-area.show iframe.chat {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
       }
       
       .swap-button {
@@ -1752,133 +1618,65 @@ window.onload = () => {
     // 移動端聊天功能
     function setupMobileChat() {
       const chatButton = document.getElementById('mobile-chat-button');
-      const chatOverlay = document.getElementById('mobile-chat-overlay');
-      const chatClose = document.getElementById('mobile-chat-close');
-      const chatInput = document.getElementById('mobile-chat-input');
-      const chatSend = document.getElementById('mobile-chat-send');
-      const chatMessages = document.getElementById('mobile-chat-messages');
+      const chatArea = document.querySelector('.chat-area');
       
-      if (!chatButton || !chatOverlay || !chatClose || !chatInput || !chatSend || !chatMessages) {
+      if (!chatButton || !chatArea) {
         console.log('Mobile chat elements not found');
         return;
       }
 
-      // 開啟聊天界面
+      // 開啟原本的Twitch聊天界面
       chatButton.addEventListener('click', function() {
-        chatOverlay.style.display = 'block';
-        chatInput.focus();
-        // 添加一些示例訊息
-        addSampleMessages();
+        chatArea.classList.add('show');
+        chatButton.style.display = 'none'; // 隱藏按鈕
       });
 
-      // 關閉聊天界面
-      chatClose.addEventListener('click', function() {
-        chatOverlay.style.display = 'none';
-        chatInput.value = '';
-      });
-
-      // 點擊背景關閉
-      chatOverlay.addEventListener('click', function(e) {
-        if (e.target === chatOverlay) {
-          chatOverlay.style.display = 'none';
-          chatInput.value = '';
+      // 點擊聊天區域關閉
+      chatArea.addEventListener('click', function(e) {
+        if (e.target === chatArea) {
+          chatArea.classList.remove('show');
+          chatButton.style.display = 'block'; // 顯示按鈕
         }
       });
 
-      // 發送訊息
-      function sendMessage() {
-        const message = chatInput.value.trim();
-        if (message) {
-          addMessage('您', message);
-          chatInput.value = '';
-          
-          // 模擬其他用戶回覆
-          setTimeout(() => {
-            const replies = [
-              '謝謝分享！',
-              '很有趣的內容',
-              '同意你的觀點',
-              '繼續加油！',
-              '👍',
-              '🎉',
-              '太棒了！'
-            ];
-            const randomReply = replies[Math.floor(Math.random() * replies.length)];
-            addMessage('觀眾' + Math.floor(Math.random() * 1000), randomReply);
-          }, 1000 + Math.random() * 2000);
+      // 添加關閉按鈕到聊天區域
+      const closeButton = document.createElement('button');
+      closeButton.innerHTML = '×';
+      closeButton.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+        background: rgba(0, 0, 0, 0.7);
+        border: none;
+        border-radius: 50%;
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        z-index: 2001;
+        display: none;
+      `;
+      
+      closeButton.addEventListener('click', function() {
+        chatArea.classList.remove('show');
+        chatButton.style.display = 'block';
+      });
+      
+      chatArea.appendChild(closeButton);
+      
+      // 在手機版顯示關閉按鈕
+      const mediaQuery = window.matchMedia('(max-width: 768px)');
+      function handleMediaQuery(e) {
+        if (e.matches) {
+          closeButton.style.display = 'block';
+        } else {
+          closeButton.style.display = 'none';
         }
       }
-
-      // 按Enter發送
-      chatInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          sendMessage();
-        }
-      });
-
-      // 點擊發送按鈕
-      chatSend.addEventListener('click', sendMessage);
-
-      // 添加訊息到聊天界面
-      function addMessage(username, text) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'mobile-chat-message';
-        messageDiv.innerHTML = `
-          <div class="mobile-chat-username">${username}</div>
-          <div class="mobile-chat-text">${text}</div>
-        `;
-        
-        chatMessages.appendChild(messageDiv);
-        
-        // 自動滾動到底部
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-        
-        // 限制訊息數量，保持最新20條
-        const messages = chatMessages.querySelectorAll('.mobile-chat-message');
-        if (messages.length > 20) {
-          chatMessages.removeChild(messages[0]);
-        }
-      }
-
-      // 添加示例訊息
-      function addSampleMessages() {
-        if (chatMessages.children.length === 0) {
-          const sampleMessages = [
-            { user: '觀眾123', text: '歡迎來到直播！' },
-            { user: '觀眾456', text: '今天的主題很有趣' },
-            { user: '觀眾789', text: '謝謝分享這些內容' },
-            { user: '觀眾101', text: '期待接下來的內容' }
-          ];
-          
-          sampleMessages.forEach(msg => {
-            addMessage(msg.user, msg.text);
-          });
-        }
-      }
-
-      // 模擬實時聊天更新
-      setInterval(() => {
-        if (chatOverlay.style.display === 'block') {
-          const randomMessages = [
-            '太精彩了！',
-            '學到很多',
-            '謝謝主播',
-            '繼續加油',
-            '👍👍👍',
-            '🎉🎉🎉',
-            '太棒了！',
-            '支持！',
-            '期待下次直播',
-            '謝謝分享'
-          ];
-          
-          if (Math.random() < 0.3) { // 30%機率添加新訊息
-            const randomMessage = randomMessages[Math.floor(Math.random() * randomMessages.length)];
-            const randomUser = '觀眾' + Math.floor(Math.random() * 9999);
-            addMessage(randomUser, randomMessage);
-          }
-        }
-      }, 3000);
+      
+      mediaQuery.addListener(handleMediaQuery);
+      handleMediaQuery(mediaQuery);
     }
 
     // 更新版本號顯示
@@ -1922,23 +1720,6 @@ window.onload = () => {
 
   <!-- 移動端聊天按鈕 -->
   <button class="mobile-chat-button" id="mobile-chat-button" title="開啟聊天"></button>
-
-  <!-- 移動端聊天界面 -->
-  <div class="mobile-chat-overlay" id="mobile-chat-overlay">
-    <div class="mobile-chat-container">
-      <div class="mobile-chat-header">
-        <div class="mobile-chat-title">聊天室</div>
-        <button class="mobile-chat-close" id="mobile-chat-close">×</button>
-      </div>
-      <div class="mobile-chat-messages" id="mobile-chat-messages">
-        <!-- 聊天訊息會在這裡動態添加 -->
-      </div>
-      <div class="mobile-chat-input-container">
-        <input type="text" class="mobile-chat-input" id="mobile-chat-input" placeholder="輸入訊息..." maxlength="500">
-        <button class="mobile-chat-send" id="mobile-chat-send"></button>
-      </div>
-    </div>
-  </div>
 
   <!-- 安裝提示 -->
   <div id="install-guide">
