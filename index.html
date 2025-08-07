@@ -611,6 +611,37 @@
           background: rgba(0, 0, 0, 0.3) !important;
           backdrop-filter: blur(15px);
         }
+        
+        /* 強制iframe內容透明 */
+        .chat-area.show iframe {
+          background: transparent !important;
+          backdrop-filter: blur(10px);
+        }
+        
+        /* 嘗試覆蓋Twitch的白色背景 */
+        .chat-area.show {
+          background: rgba(0, 0, 0, 0.2) !important;
+          backdrop-filter: blur(20px);
+        }
+        
+        /* 使用opacity和filter創建透明效果 */
+        .chat-area.show iframe.chat {
+          opacity: 0.9;
+          filter: brightness(0.9) contrast(1.1) saturate(0.8);
+        }
+        
+        /* 添加更強的透明效果 */
+        .chat-area.show::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.1);
+          pointer-events: none;
+          z-index: 1;
+        }
       }
     }
 
