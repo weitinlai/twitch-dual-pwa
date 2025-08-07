@@ -865,8 +865,11 @@
           // 聊天室顯示主畫面的
           document.getElementById("chat").src = `https://www.twitch.tv/embed/${ch1}/chat?parent=${parent}`;
           
-          document.getElementById("ch1").value = ch1;
-          document.getElementById("ch2").value = ch2;
+                     // 設置輸入框值（如果存在）
+           const ch1Input = document.getElementById("ch1");
+           const ch2Input = document.getElementById("ch2");
+           if (ch1Input) ch1Input.value = ch1;
+           if (ch2Input) ch2Input.value = ch2;
           
 
           
@@ -1685,7 +1688,7 @@ window.onload = () => {
   
   // 恢復小畫面位置
   restorePipPosition();
-  restoreSwapButtonPosition();
+  // restoreSwapButtonPosition(); // 暫時註解，因為函數未定義
   
   // 顯示操作提示
   setTimeout(showPipHint, 1000);
@@ -1715,6 +1718,20 @@ window.onload = () => {
   console.log('Is Safari:', isSafari);
   console.log('Already shown:', localStorage.getItem('installPromptShown'));
   
+  // 測試模式：在所有平台上顯示安裝提示
+  console.log('=== INSTALL PROMPT TEST ===');
+  console.log('Testing install prompt on all platforms...');
+  console.log('User Agent:', navigator.userAgent);
+  console.log('Platform:', navigator.platform);
+  
+  setTimeout(() => {
+    console.log('Attempting to show install guide...');
+    showInstallGuide();
+    console.log('Install guide function called');
+  }, 2000);
+  
+  // 原本的邏輯（暫時註解）
+  /*
   if (isIOS && !isInStandalone && !localStorage.getItem('installPromptShown')) {
     console.log('iOS device detected, showing install prompt');
     
@@ -1734,6 +1751,7 @@ window.onload = () => {
       }, 1000);
     }
   }
+  */
 };
 
     function restorePipPosition() {
