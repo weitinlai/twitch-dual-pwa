@@ -514,6 +514,116 @@
         position: fixed !important;
         pointer-events: auto !important;
       }
+      
+      /* 主畫面模式下的landscape布局優化 */
+      @media (orientation: landscape) {
+        body {
+          flex-direction: row !important;
+        }
+        
+        .video-area {
+          flex: 1 !important;
+          width: 100% !important;
+          height: 100vh !important;
+          border-radius: 0 !important;
+        }
+        
+        .main-player {
+          border-radius: 0 !important;
+        }
+        
+        .chat-area {
+          display: none !important;
+        }
+        
+        /* 當聊天開啟時，video-area保持全寬，聊天區域覆蓋在右側 */
+        body.chat-open .video-area {
+          width: 100% !important;
+          flex: 1 !important;
+        }
+        
+        /* 聊天區域在landscape模式下的正確位置 - 覆蓋移動端規則 */
+        .chat-area.show {
+          top: 0 !important;
+          left: auto !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 30% !important;
+          border-radius: 0 !important;
+          animation: slideRight 0.3s ease !important;
+          position: fixed !important;
+          z-index: 2002 !important;
+        }
+        
+        @keyframes slideRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+      }
+      
+      /* 主畫面模式下的landscape布局優化 - 更高優先級 */
+      @media (orientation: landscape) and (max-width: 768px) {
+        /* 覆蓋移動端的landscape規則 */
+        .chat-area.show {
+          top: 0 !important;
+          left: 70% !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 30% !important;
+          border-radius: 0 !important;
+          animation: slideRight 0.3s ease !important;
+          position: fixed !important;
+          z-index: 2002 !important;
+        }
+        
+        /* 確保video-area在聊天開啟時保持全寬 */
+        body.chat-open .video-area {
+          width: 100% !important;
+          flex: 1 !important;
+        }
+        
+        /* 確保PIP容器在主畫面模式下正確顯示 */
+        .pip-container {
+          position: absolute !important;
+          width: 35% !important;
+          height: 25% !important;
+          bottom: 10px !important;
+          right: 10px !important;
+          border: 3px solid rgba(59, 130, 246, 0.8) !important;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+          border-radius: 8px !important;
+          z-index: 10 !important;
+        }
+        
+        /* 確保主播放器正確顯示 */
+        .main-player {
+          height: 100% !important;
+          width: 100% !important;
+          border-radius: 0 !important;
+        }
+      }
+      
+      /* 主畫面模式下的landscape布局 - 最高優先級覆蓋 */
+      @media (orientation: landscape) and (max-width: 768px) {
+        /* 使用更具體的選擇器來覆蓋移動端規則 */
+        body.chat-open .chat-area.show {
+          top: 0 !important;
+          left: auto !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 30% !important;
+          border-radius: 0 !important;
+          animation: slideRight 0.3s ease !important;
+          position: fixed !important;
+          z-index: 2002 !important;
+        }
+        
+        /* 確保video-area在聊天開啟時保持全寬 */
+        body.chat-open .video-area {
+          width: 100% !important;
+          flex: 1 !important;
+        }
+      }
     }
     
     /* iPhone 專用聊天界面 */
@@ -588,7 +698,7 @@
         animation: slideUp 0.3s ease;
       }
       
-      /* Landscape模式：右側直列聊天 */
+      /* Landscape模式：右側直列聊天（非主畫面模式） */
       @media (orientation: landscape) and (max-width: 768px) {
         .chat-area.show {
           top: 0 !important;
@@ -717,7 +827,7 @@
         }
       }
       
-      /* Landscape模式：保持PIP布局 */
+      /* Landscape模式：保持PIP布局（非主畫面模式） */
       @media (orientation: landscape) and (max-width: 768px) {
         .video-area {
           flex-direction: row;
