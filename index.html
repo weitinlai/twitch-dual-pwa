@@ -1823,6 +1823,22 @@ window.onload = () => {
       }
     }
 
+    function resetPipPositionForLandscape() {
+      const pipContainer = document.querySelector('.pip-container');
+      if (pipContainer) {
+        // 重置為右下角位置
+        pipContainer.style.left = 'auto';
+        pipContainer.style.top = 'auto';
+        pipContainer.style.right = '10px';
+        pipContainer.style.bottom = '10px';
+        
+        // 清除之前保存的位置
+        localStorage.removeItem('pipPosition');
+        
+        console.log('PIP 位置已重置到右下角 (landscape 模式)');
+      }
+    }
+
     // 全局拖拽優化
     function setupGlobalDragOptimizations() {
       // 防止整個頁面的拖拽行為干擾
@@ -1910,7 +1926,16 @@ window.onload = () => {
         // 延遲一下讓CSS重新計算
         setTimeout(() => {
           console.log('Orientation changed, current orientation:', window.orientation);
-        }, 100);
+          
+          // 檢查是否切換到 landscape 模式
+          const isLandscape = window.orientation === 90 || window.orientation === -90;
+          const isMobile = window.innerWidth <= 768;
+          
+          if (isLandscape && isMobile) {
+            console.log('切換到 landscape 模式，重置 PIP 位置到右下角');
+            resetPipPositionForLandscape();
+          }
+        }, 300); // 增加延遲時間確保 CSS 完全重新計算
       });
 
       // 點擊聊天區域關閉
@@ -1981,6 +2006,36 @@ window.onload = () => {
       
       mobileMediaQuery.addListener(handleMobileMediaQuery);
       handleMobileMediaQuery(mobileMediaQuery);
+      
+      // 監聽 orientation 變化 (更可靠的方式)
+      const orientationMediaQuery = window.matchMedia('(orientation: landscape)');
+      function handleOrientationChange(e) {
+        const isMobile = window.innerWidth <= 768;
+        if (e.matches && isMobile) {
+          console.log('Media query 檢測到 landscape 模式，重置 PIP 位置');
+          setTimeout(() => {
+            resetPipPositionForLandscape();
+          }, 200);
+        }
+      }
+      
+      orientationMediaQuery.addListener(handleOrientationChange);
+      handleOrientationChange(orientationMediaQuery);
+      
+      // 監聽視窗大小變化 (處理 orientation 變化)
+      let resizeTimeout;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+          const isLandscape = window.innerWidth > window.innerHeight;
+          const isMobile = window.innerWidth <= 768;
+          
+          if (isLandscape && isMobile) {
+            console.log('Resize 檢測到 landscape 模式，重置 PIP 位置');
+            resetPipPositionForLandscape();
+          }
+        }, 300);
+      });
     }
 
     // iPhone PWA Twitch 登入狀態管理器 (背景運行)
