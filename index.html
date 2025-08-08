@@ -503,7 +503,7 @@
       
       /* 確保聊天區域在主畫面模式下正常顯示 */
       .chat-area.show {
-        z-index: 2002 !important;
+        z-index: 10000 !important;
         position: fixed !important;
         pointer-events: auto !important;
       }
@@ -552,7 +552,7 @@
           border-radius: 0 !important;
           animation: slideRight 0.3s ease !important;
           position: fixed !important;
-          z-index: 2002 !important;
+          z-index: 10000 !important;
         }
         
         @keyframes slideRight {
@@ -566,14 +566,14 @@
         /* 覆蓋移動端的landscape規則 */
         .chat-area.show {
           top: 0 !important;
-          left: 70% !important;
+          left: auto !important;
           right: 0 !important;
           bottom: 0 !important;
           width: 30% !important;
           border-radius: 0 !important;
           animation: slideRight 0.3s ease !important;
           position: fixed !important;
-          z-index: 2002 !important;
+          z-index: 10000 !important;
         }
         
         /* 確保video-area在聊天開啟時保持全寬 */
@@ -615,7 +615,7 @@
           border-radius: 0 !important;
           animation: slideRight 0.3s ease !important;
           position: fixed !important;
-          z-index: 2002 !important;
+          z-index: 10000 !important;
         }
         
         /* 確保video-area在聊天開啟時保持全寬 */
@@ -627,23 +627,23 @@
     }
     
     /* iPhone 專用聊天界面 */
-    .mobile-chat-button {
-      display: none;
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      width: 56px;
-      height: 56px;
-      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-      border-radius: 50%;
-      border: none;
-      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
-      z-index: 1000;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(10px);
-      -webkit-tap-highlight-color: transparent;
-    }
+          .mobile-chat-button {
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        width: 56px;
+        height: 56px;
+        background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+        border-radius: 50%;
+        border: none;
+        box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+        z-index: 9999;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        -webkit-tap-highlight-color: transparent;
+      }
 
     .mobile-chat-button::before {
       content: '💬';
@@ -689,7 +689,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        z-index: 2000;
+        z-index: 10000;
         background: rgba(0, 0, 0, 0.3);
         backdrop-filter: blur(15px);
         border-radius: 20px 20px 0 0;
@@ -708,6 +708,7 @@
           width: 30% !important;
           border-radius: 0 !important;
           animation: slideRight 0.3s ease !important;
+          z-index: 10000 !important;
         }
         
         .chat-area.show iframe.chat {
