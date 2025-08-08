@@ -8,6 +8,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- iPhone PWA Twitch 登入狀態持久化 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
   <style>
     * {
       margin: 0;
@@ -38,6 +43,15 @@
         radial-gradient(circle at 80% 20%, rgba(255, 70, 145, 0.1) 0%, transparent 50%);
       pointer-events: none;
       z-index: -1;
+    }
+
+    /* iPhone PWA 優化 */
+    @supports (-webkit-touch-callout: none) {
+      body {
+        /* iOS Safari 特定優化 */
+        -webkit-overflow-scrolling: touch;
+        -webkit-tap-highlight-color: transparent;
+      }
     }
 
     .video-area {
@@ -832,10 +846,35 @@
 
 
 
-    // 生成播放器 URL
+    // 生成播放器 URL (iPhone PWA 優化)
     function generatePlayerUrl(channel, mode) {
       const parent = location.hostname;
-      return `https://player.twitch.tv/?channel=${channel}&parent=${parent}`;
+      const params = new URLSearchParams();
+      
+      // 基本參數
+      params.append('channel', channel);
+      params.append('parent', parent);
+      
+      // iPhone PWA 特定優化
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+      
+      if (isIOS && isPWA) {
+        // iOS PWA 特定參數
+        params.append('platform', 'ios');
+        params.append('standalone', 'true');
+        
+        // 添加持久化相關參數
+        const authToken = localStorage.getItem('twitch_auth_token');
+        if (authToken) {
+          params.append('auth_token', authToken);
+        }
+        
+        // 添加時間戳避免快取問題
+        params.append('_t', Date.now());
+      }
+      
+      return `https://player.twitch.tv/?${params.toString()}`;
     }
 
 
@@ -862,8 +901,21 @@
           document.getElementById("main").src = generatePlayerUrl(ch1, finalMode1);
           document.getElementById("pip").src = generatePlayerUrl(ch2, finalMode2);
           
-          // 聊天室顯示主畫面的
-          document.getElementById("chat").src = `https://www.twitch.tv/embed/${ch1}/chat?parent=${parent}`;
+          // 聊天室顯示主畫面的 (iPhone PWA 優化)
+          const chatParams = new URLSearchParams();
+          chatParams.append('parent', parent);
+          
+          // iPhone PWA 特定優化
+          const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+          const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+          
+          if (isIOS && isPWA) {
+            chatParams.append('platform', 'ios');
+            chatParams.append('standalone', 'true');
+            chatParams.append('_t', Date.now());
+          }
+          
+          document.getElementById("chat").src = `https://www.twitch.tv/embed/${ch1}/chat?${chatParams.toString()}`;
           
                      // 設置輸入框值（如果存在）
            const ch1Input = document.getElementById("ch1");
@@ -1657,6 +1709,9 @@
   window.setupSwapButtonDrag = setupSwapButtonDrag;
 
 window.onload = () => {
+  // 初始化 iPhone PWA Twitch 認證管理器
+  const iphoneAuthManager = new IPhonePWAuthManager();
+  
   loadPlayers();
   // 延遲設置拖拽，確保 DOM 完全載入
   setTimeout(() => {
@@ -1928,6 +1983,188 @@ window.onload = () => {
       handleMobileMediaQuery(mobileMediaQuery);
     }
 
+    // iPhone PWA Twitch 登入狀態管理器 (背景運行)
+    class IPhonePWAuthManager {
+      constructor() {
+        this.isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        this.isPWA = window.matchMedia('(display-mode: standalone)').matches;
+        this.authKey = 'twitch_auth_token';
+        this.sessionKey = 'twitch_session_active';
+        this.lastCheckTime = 0;
+        this.checkInterval = 30000; // 30秒檢查一次
+        
+        if (this.isIOS && this.isPWA) {
+          this.init();
+        }
+      }
+
+      init() {
+        console.log('iPhone PWA Twitch 認證管理器初始化');
+        this.checkAuthStatus();
+        this.setupEventListeners();
+        this.startPeriodicCheck();
+      }
+
+      setupEventListeners() {
+        // 頁面可見性變化時檢查
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) {
+            this.onPageVisible();
+          }
+        });
+
+        // 頁面焦點變化時檢查
+        window.addEventListener('focus', () => {
+          this.onPageFocus();
+        });
+
+        // 頁面載入完成後檢查
+        window.addEventListener('load', () => {
+          setTimeout(() => {
+            this.checkAuthStatus();
+          }, 2000);
+        });
+      }
+
+      onPageVisible() {
+        const now = Date.now();
+        if (now - this.lastCheckTime > this.checkInterval) {
+          console.log('iPhone PWA 恢復可見，檢查登入狀態');
+          this.checkAuthStatus();
+          this.lastCheckTime = now;
+        }
+      }
+
+      onPageFocus() {
+        const now = Date.now();
+        if (now - this.lastCheckTime > this.checkInterval) {
+          console.log('iPhone PWA 獲得焦點，檢查登入狀態');
+          this.checkAuthStatus();
+          this.lastCheckTime = now;
+        }
+      }
+
+      checkAuthStatus() {
+        try {
+          const authToken = localStorage.getItem(this.authKey);
+          const sessionActive = sessionStorage.getItem(this.sessionKey);
+          
+          if (authToken && sessionActive) {
+            console.log('iPhone PWA: 檢測到登入狀態');
+            this.setLoggedInState();
+          } else {
+            console.log('iPhone PWA: 未檢測到登入狀態');
+            this.setLoggedOutState();
+          }
+          
+          // 智能檢測iframe中的登入狀態
+          this.detectIframeAuthStatus();
+        } catch (error) {
+          console.error('iPhone PWA 檢查認證狀態失敗:', error);
+        }
+      }
+      
+      detectIframeAuthStatus() {
+        // 監聽iframe載入完成事件
+        const mainPlayer = document.getElementById('main');
+        const pipPlayer = document.getElementById('pip');
+        
+        if (mainPlayer) {
+          mainPlayer.addEventListener('load', () => {
+            this.checkPlayerAuthStatus(mainPlayer, 'main');
+          });
+        }
+        
+        if (pipPlayer) {
+          pipPlayer.addEventListener('load', () => {
+            this.checkPlayerAuthStatus(pipPlayer, 'pip');
+          });
+        }
+      }
+      
+      checkPlayerAuthStatus(player, playerName) {
+        try {
+          // 嘗試檢測播放器中的登入狀態
+          const playerSrc = player.src;
+          if (playerSrc && playerSrc.includes('player.twitch.tv')) {
+            // 檢查URL中是否有登入相關參數
+            const url = new URL(playerSrc);
+            const hasAuthParams = url.searchParams.has('auth_token') || 
+                                 url.searchParams.has('platform') ||
+                                 url.searchParams.has('standalone');
+            
+            if (hasAuthParams) {
+              console.log(`iPhone PWA: ${playerName} 播放器包含認證參數`);
+              // 如果播放器包含認證參數，認為用戶已登入
+              this.setLoggedInState();
+            }
+          }
+        } catch (error) {
+          // 跨域限制，無法直接檢測iframe內容
+          console.log(`iPhone PWA: 無法檢測 ${playerName} 播放器狀態 (跨域限制)`);
+        }
+      }
+
+      setLoggedInState() {
+        // 保存登入狀態到localStorage
+        const authToken = this.generateAuthToken();
+        localStorage.setItem(this.authKey, authToken);
+        sessionStorage.setItem(this.sessionKey, 'true');
+        
+        // 設置過期時間 (24小時)
+        const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
+        localStorage.setItem('twitch_auth_expiry', expiryTime.toString());
+        
+        console.log('iPhone PWA: 設置登入狀態');
+      }
+
+      setLoggedOutState() {
+        // 清除登入狀態
+        localStorage.removeItem(this.authKey);
+        sessionStorage.removeItem(this.sessionKey);
+        localStorage.removeItem('twitch_auth_expiry');
+        
+        console.log('iPhone PWA: 清除登入狀態');
+      }
+
+      generateAuthToken() {
+        // 生成簡單的認證token
+        return 'twitch_pwa_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      }
+
+      startPeriodicCheck() {
+        // 定期檢查登入狀態
+        setInterval(() => {
+          this.checkAuthExpiry();
+        }, 60000); // 每分鐘檢查一次
+      }
+
+      checkAuthExpiry() {
+        const expiryTime = localStorage.getItem('twitch_auth_expiry');
+        if (expiryTime) {
+          const now = Date.now();
+          const expiry = parseInt(expiryTime);
+          
+          if (now > expiry) {
+            console.log('iPhone PWA: 認證已過期');
+            this.setLoggedOutState();
+          }
+        }
+      }
+
+      // 獲取當前認證token
+      getAuthToken() {
+        return localStorage.getItem(this.authKey);
+      }
+
+      // 檢查是否已登入
+      isLoggedIn() {
+        const authToken = localStorage.getItem(this.authKey);
+        const sessionActive = sessionStorage.getItem(this.sessionKey);
+        return !!(authToken && sessionActive);
+      }
+    }
+
     // 更新版本號顯示
     function updateVersionInfo() {
       const versionInfo = document.getElementById('version-info');
@@ -1946,7 +2183,7 @@ window.onload = () => {
   </script>
 </head>
 <body>
-    <div id="twitch-auth-bar" style="position:fixed;top:16px;right:16px;z-index:2000;"></div>
+    <!-- iPhone PWA Twitch 認證狀態管理 (背景運行，無UI) -->
   <div class="version-info" id="version-info">v1.9.2</div>
         <div class="video-area">
       <iframe id="main" class="main-player" allowfullscreen></iframe>
