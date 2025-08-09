@@ -91,6 +91,31 @@
         -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1) !important;
       }
       
+      /* 確保聊天室 iframe 的輸入框可以正常工作 */
+      iframe.chat,
+      iframe#chat {
+        touch-action: auto !important;
+        -webkit-touch-callout: default !important;
+        -webkit-user-select: auto !important;
+        user-select: auto !important;
+        pointer-events: auto !important;
+      }
+      
+      /* 聊天室 iframe 內的輸入框特殊處理 */
+      iframe.chat input,
+      iframe.chat textarea,
+      iframe.chat select,
+      iframe#chat input,
+      iframe#chat textarea,
+      iframe#chat select {
+        touch-action: auto !important;
+        -webkit-touch-callout: default !important;
+        -webkit-user-select: auto !important;
+        user-select: auto !important;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1) !important;
+        pointer-events: auto !important;
+      }
+      
       /* 確保 iframe 內的任何輸入元素都可以正常獲得焦點 */
       iframe * {
         touch-action: auto !important;
@@ -1825,6 +1850,47 @@
             iframe.style.touchAction = 'auto';
           });
         }
+        
+        // 特殊處理聊天室 iframe
+        if (iframe.id === 'chat' || iframe.classList.contains('chat')) {
+          console.log('Setting up chat iframe specific handling');
+          
+          // 確保聊天室 iframe 可以正常處理輸入
+          iframe.style.pointerEvents = 'auto';
+          iframe.style.touchAction = 'auto';
+          iframe.style.webkitUserSelect = 'auto';
+          iframe.style.userSelect = 'auto';
+          iframe.style.webkitTouchCallout = 'default';
+          
+          // 為聊天室 iframe 添加額外的點擊事件處理
+          iframe.addEventListener('click', function(e) {
+            console.log('Chat iframe clicked');
+            // 確保聊天室 iframe 可以正常處理輸入
+            iframe.style.pointerEvents = 'auto';
+            iframe.style.touchAction = 'auto';
+            
+            // 嘗試讓 iframe 獲得焦點
+            setTimeout(() => {
+              try {
+                iframe.focus();
+              } catch (error) {
+                // 跨域限制，無法直接操作 iframe
+              }
+            }, 100);
+          });
+          
+          // 為聊天室 iframe 添加觸摸事件處理
+          iframe.addEventListener('touchstart', function(e) {
+            console.log('Chat iframe touchstart');
+            // 確保聊天室可以處理觸摸事件
+            iframe.style.pointerEvents = 'auto';
+            iframe.style.touchAction = 'auto';
+          }, { passive: true });
+          
+          iframe.addEventListener('touchend', function(e) {
+            console.log('Chat iframe touchend');
+          }, { passive: true });
+        }
       });
     });
     
@@ -1906,6 +1972,9 @@
         
         // 添加 iframe 輸入框焦點處理
         setupIframeFocusHandling();
+        
+        // 添加聊天室 iframe 專門處理
+        setupChatIframeHandling();
         
         // 額外的 iframe 焦點處理
         document.addEventListener('click', function(e) {
@@ -2398,6 +2467,86 @@
           alert(info);
         });
       }
+    }
+
+    // 專門處理聊天室 iframe 的函數
+    function setupChatIframeHandling() {
+      const chatIframe = document.getElementById('chat');
+      if (!chatIframe) {
+        console.log('Chat iframe not found');
+        return;
+      }
+
+      console.log('Setting up chat iframe handling');
+      
+      // 確保聊天室 iframe 的樣式正確
+      chatIframe.style.pointerEvents = 'auto';
+      chatIframe.style.touchAction = 'auto';
+      chatIframe.style.webkitUserSelect = 'auto';
+      chatIframe.style.userSelect = 'auto';
+      chatIframe.style.webkitTouchCallout = 'default';
+      
+      // 監聽聊天室 iframe 的載入事件
+      chatIframe.addEventListener('load', function() {
+        console.log('Chat iframe loaded');
+        
+        // 再次確保聊天室 iframe 的樣式正確
+        chatIframe.style.pointerEvents = 'auto';
+        chatIframe.style.touchAction = 'auto';
+        chatIframe.style.webkitUserSelect = 'auto';
+        chatIframe.style.userSelect = 'auto';
+        chatIframe.style.webkitTouchCallout = 'default';
+        
+        // 嘗試為聊天室 iframe 添加額外的事件處理
+        try {
+          const chatDoc = chatIframe.contentDocument || chatIframe.contentWindow.document;
+          if (chatDoc) {
+            // 監聽聊天室內的輸入框事件
+            chatDoc.addEventListener('focusin', function(e) {
+              if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                console.log('Chat iframe input focused:', e.target);
+                // 確保聊天室 iframe 可以正常處理輸入
+                chatIframe.style.pointerEvents = 'auto';
+                chatIframe.style.touchAction = 'auto';
+              }
+            });
+            
+            // 為聊天室內的所有輸入框添加觸摸事件處理
+            const chatInputs = chatDoc.querySelectorAll('input, textarea, select');
+            chatInputs.forEach(input => {
+              input.addEventListener('touchstart', function(e) {
+                e.stopPropagation();
+                this.focus();
+              }, { passive: true });
+            });
+          }
+        } catch (error) {
+          console.log('Cannot access chat iframe content due to cross-origin restrictions');
+          
+          // 為跨域聊天室 iframe 添加間接處理
+          chatIframe.addEventListener('click', function(e) {
+            console.log('Chat iframe clicked (cross-origin)');
+            chatIframe.style.pointerEvents = 'auto';
+            chatIframe.style.touchAction = 'auto';
+            
+            // 嘗試讓聊天室 iframe 獲得焦點
+            setTimeout(() => {
+              try {
+                chatIframe.focus();
+              } catch (error) {
+                // 跨域限制，無法直接操作 iframe
+              }
+            }, 100);
+          });
+          
+          // 為聊天室 iframe 添加觸摸事件處理
+          chatIframe.addEventListener('touchstart', function(e) {
+            console.log('Chat iframe touchstart (cross-origin)');
+            chatIframe.style.pointerEvents = 'auto';
+            chatIframe.style.touchAction = 'auto';
+          }, { passive: true });
+        }
+      });
     }
   </script>
 </head>
