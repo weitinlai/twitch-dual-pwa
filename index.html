@@ -54,6 +54,49 @@
       }
     }
 
+    /* iOS 輸入框優化 - 確保鍵盤可以正常彈出 */
+    @supports (-webkit-touch-callout: none) {
+      /* 確保 iframe 內的輸入框可以正常獲得焦點 */
+      iframe {
+        -webkit-touch-callout: default;
+        -webkit-user-select: auto;
+        user-select: auto;
+        touch-action: auto;
+      }
+      
+      /* 當 iframe 內有輸入框獲得焦點時，允許鍵盤彈出 */
+      iframe:focus-within {
+        touch-action: auto !important;
+      }
+      
+      /* 確保輸入框在 iframe 內可以正常工作 */
+      iframe input,
+      iframe textarea,
+      iframe select {
+        -webkit-touch-callout: default !important;
+        -webkit-user-select: auto !important;
+        user-select: auto !important;
+        touch-action: auto !important;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1) !important;
+      }
+      
+      /* 確保 Twitch 登入頁面的輸入框可以正常工作 */
+      iframe[src*="twitch.tv"] input,
+      iframe[src*="twitch.tv"] textarea,
+      iframe[src*="twitch.tv"] select {
+        touch-action: auto !important;
+        -webkit-touch-callout: default !important;
+        -webkit-user-select: auto !important;
+        user-select: auto !important;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1) !important;
+      }
+      
+      /* 確保 iframe 內的任何輸入元素都可以正常獲得焦點 */
+      iframe * {
+        touch-action: auto !important;
+      }
+    }
+
     .video-area {
       position: relative;
       flex: 3;
@@ -1100,7 +1143,16 @@
         offsetY = startY - rect.top;
         
         pipContainer.classList.add('dragging');
-        e.preventDefault();
+        
+        // 檢查是否點擊的是輸入框或 iframe 內的內容
+        const target = e.target;
+        const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+        const isInIframe = target.closest('iframe') || target.tagName === 'IFRAME';
+        
+        // 只有當不是輸入框且不在 iframe 內時才阻止默認行為
+        if (!isInputField && !isInIframe) {
+          e.preventDefault();
+        }
         
         // 設置點擊計時器
         clickTimer = setTimeout(() => {
@@ -1132,7 +1184,16 @@
         const y = touch.clientY - offsetY;
         
         updatePipPosition(x, y, videoArea, pipContainer);
-        e.preventDefault();
+        
+        // 檢查是否在輸入框或 iframe 內
+        const target = e.target;
+        const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+        const isInIframe = target.closest('iframe') || target.tagName === 'IFRAME';
+        
+        // 只有當不是輸入框且不在 iframe 內時才阻止默認行為
+        if (!isInputField && !isInIframe) {
+          e.preventDefault();
+        }
       }, { passive: false });
 
       pipContainer.addEventListener('touchend', function(e) {
@@ -1708,91 +1769,194 @@
   };
   window.setupSwapButtonDrag = setupSwapButtonDrag;
 
-window.onload = () => {
-  // 初始化 iPhone PWA Twitch 認證管理器
-  const iphoneAuthManager = new IPhonePWAuthManager();
-  
-  loadPlayers();
-  // 延遲設置拖拽，確保 DOM 完全載入
-  setTimeout(() => {
-    console.log('Setting up drag and drop...');
-    setupPipDrag();
-    setupSwapButtonDrag();
-    setupGlobalDragOptimizations(); // 添加全局拖拽優化
+  // iOS iframe 輸入框焦點處理
+  function setupIframeFocusHandling() {
+    // 監聽所有 iframe 的載入事件
+    const iframes = document.querySelectorAll('iframe');
+    iframes.forEach(iframe => {
+      iframe.addEventListener('load', function() {
+        try {
+          // 嘗試為 iframe 內的輸入框添加焦點事件處理
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          if (iframeDoc) {
+            // 監聽 iframe 內的輸入框焦點事件
+            iframeDoc.addEventListener('focusin', function(e) {
+              if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                console.log('iframe input focused:', e.target);
+                // 確保 iframe 可以正常處理輸入
+                iframe.style.pointerEvents = 'auto';
+                iframe.style.touchAction = 'auto';
+                
+                // 移除可能干擾輸入的樣式
+                iframe.style.webkitUserSelect = 'auto';
+                iframe.style.userSelect = 'auto';
+                iframe.style.webkitTouchCallout = 'default';
+              }
+            });
+            
+            iframeDoc.addEventListener('focusout', function(e) {
+              if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                console.log('iframe input blurred:', e.target);
+              }
+            });
+            
+            // 為所有輸入框添加觸摸事件處理
+            const inputs = iframeDoc.querySelectorAll('input, textarea, select');
+            inputs.forEach(input => {
+              input.addEventListener('touchstart', function(e) {
+                e.stopPropagation();
+                // 確保輸入框可以獲得焦點
+                this.focus();
+              }, { passive: true });
+              
+              input.addEventListener('touchend', function(e) {
+                e.stopPropagation();
+              }, { passive: true });
+            });
+          }
+        } catch (error) {
+          // 跨域限制，無法直接訪問 iframe 內容
+          console.log('Cannot access iframe content due to cross-origin restrictions');
+          
+          // 為跨域 iframe 添加間接處理
+          iframe.addEventListener('click', function(e) {
+            // 當點擊 iframe 時，確保它可以接收焦點
+            iframe.style.pointerEvents = 'auto';
+            iframe.style.touchAction = 'auto';
+          });
+        }
+      });
+    });
     
-    // 調試信息
-    const pipContainer = document.querySelector('.pip-container');
-    const swapButton = document.querySelector('.swap-button');
-    const videoArea = document.querySelector('.video-area');
+    // 為新動態添加的 iframe 也添加監聽
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        mutation.addedNodes.forEach(function(node) {
+          if (node.tagName === 'IFRAME') {
+            node.addEventListener('load', function() {
+              setupIframeFocusHandling();
+            });
+          }
+        });
+      });
+    });
     
-    console.log('Debug Info:');
-    console.log('PIP Container:', pipContainer);
-    console.log('PIP draggable:', pipContainer ? pipContainer.getAttribute('draggable') : 'not found');
-    console.log('Swap Button:', swapButton);
-    console.log('Swap draggable:', swapButton ? swapButton.getAttribute('draggable') : 'not found');
-    console.log('Video Area:', videoArea);
-    console.log('Video Area drop zone:', videoArea ? videoArea.getAttribute('data-drop-zone') : 'not found');
-  }, 1000);
-  
-  setupKeyboardShortcuts();
-  setupInstallGuide();
-  updateVersionInfo();
-  
-  // 設置移動端聊天功能
-  setupMobileChat();
-  
-  // 恢復小畫面位置
-  restorePipPosition();
-  // restoreSwapButtonPosition(); // 暫時註解，因為函數未定義
-  
-  // 顯示操作提示
-  setTimeout(showPipHint, 1000);
-  
-  // iOS 設備優化
-  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (isIOS) {
-    console.log('iOS device detected, applying touch optimizations');
-    // 添加 iOS 特定的樣式
-    document.body.classList.add('ios-device');
-    
-    // 防止頁面縮放和滾動
-    document.addEventListener('touchmove', function(e) {
-      if (e.touches.length > 1) {
-        e.preventDefault();
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+    window.onload = () => {
+      // 初始化 iPhone PWA Twitch 認證管理器
+      const iphoneAuthManager = new IPhonePWAuthManager();
+      
+      loadPlayers();
+      // 延遲設置拖拽，確保 DOM 完全載入
+      setTimeout(() => {
+        console.log('Setting up drag and drop...');
+        setupPipDrag();
+        setupSwapButtonDrag();
+        setupGlobalDragOptimizations(); // 添加全局拖拽優化
+        
+        // 調試信息
+        const pipContainer = document.querySelector('.pip-container');
+        const swapButton = document.querySelector('.swap-button');
+        const videoArea = document.querySelector('.video-area');
+        
+        console.log('Debug Info:');
+        console.log('PIP Container:', pipContainer);
+        console.log('PIP draggable:', pipContainer ? pipContainer.getAttribute('draggable') : 'not found');
+        console.log('Swap Button:', swapButton);
+        console.log('Swap draggable:', swapButton ? swapButton.getAttribute('draggable') : 'not found');
+        console.log('Video Area:', videoArea);
+        console.log('Video Area drop zone:', videoArea ? videoArea.getAttribute('data-drop-zone') : 'not found');
+      }, 1000);
+      
+      setupKeyboardShortcuts();
+      setupInstallGuide();
+      updateVersionInfo();
+      
+      // 設置移動端聊天功能
+      setupMobileChat();
+      
+      // 恢復小畫面位置
+      restorePipPosition();
+      // restoreSwapButtonPosition(); // 暫時註解，因為函數未定義
+      
+      // 顯示操作提示
+      setTimeout(showPipHint, 1000);
+      
+      // iOS 設備優化
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isIOS) {
+        console.log('iOS device detected, applying touch optimizations');
+        // 添加 iOS 特定的樣式
+        document.body.classList.add('ios-device');
+        
+        // 防止頁面縮放和滾動
+        document.addEventListener('touchmove', function(e) {
+          // 檢查是否在 iframe 內或點擊的是輸入框
+          const target = e.target;
+          const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+          const isInIframe = target.closest('iframe') || target.tagName === 'IFRAME';
+          
+          // 只有在不是輸入框且不在 iframe 內且是多點觸控時才阻止默認行為
+          if (!isInputField && !isInIframe && e.touches.length > 1) {
+            e.preventDefault();
+          }
+        }, { passive: false });
+        
+        // 添加 iframe 輸入框焦點處理
+        setupIframeFocusHandling();
+        
+        // 額外的 iframe 焦點處理
+        document.addEventListener('click', function(e) {
+          // 如果點擊的是 iframe 或其子元素，確保它可以接收焦點
+          const iframe = e.target.closest('iframe');
+          if (iframe) {
+            iframe.style.pointerEvents = 'auto';
+            iframe.style.touchAction = 'auto';
+            
+            // 嘗試讓 iframe 獲得焦點
+            setTimeout(() => {
+              try {
+                iframe.focus();
+              } catch (error) {
+                // 跨域限制，無法直接操作 iframe
+              }
+            }, 100);
+          }
+        });
       }
-    }, { passive: false });
-  }
-  
-  // 自動偵測 iOS Safari，從瀏覽器開啟時顯示安裝提示
-  const isInStandalone = window.matchMedia('(display-mode: standalone)').matches;
-  const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
-  
-  console.log('Install prompt check:');
-  console.log('Is iOS:', isIOS);
-  console.log('Is standalone:', isInStandalone);
-  console.log('Is Safari:', isSafari);
-  console.log('Already shown:', localStorage.getItem('installPromptShown'));
-  
-  // iPhone安裝提示邏輯
-  console.log('Install prompt check:');
-  console.log('Is iOS:', isIOS);
-  console.log('Is standalone:', isInStandalone);
-  console.log('Is Safari:', isSafari);
-  console.log('Already shown:', localStorage.getItem('installPromptShown'));
-  
-  if (isIOS && !isInStandalone && !localStorage.getItem('installPromptShown')) {
-    console.log('iOS device detected, showing install prompt');
-    
-    // 延遲顯示安裝提示
-    setTimeout(() => {
-      console.log('Showing install guide...');
-      showInstallGuide();
-      localStorage.setItem('installPromptShown', '1');
-    }, 3000);
-  } else {
-    console.log('Install prompt conditions not met');
-  }
-};
+      
+      // 自動偵測 iOS Safari，從瀏覽器開啟時顯示安裝提示
+      const isInStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
+      
+      console.log('Install prompt check:');
+      console.log('Is iOS:', isIOS);
+      console.log('Is standalone:', isInStandalone);
+      console.log('Is Safari:', isSafari);
+      console.log('Already shown:', localStorage.getItem('installPromptShown'));
+      
+      // iPhone安裝提示邏輯
+      console.log('Install prompt check:');
+      console.log('Is iOS:', isIOS);
+      console.log('Is standalone:', isInStandalone);
+      console.log('Is Safari:', isSafari);
+      console.log('Already shown:', localStorage.getItem('installPromptShown'));
+      
+      if (isIOS && !isInStandalone && !localStorage.getItem('installPromptShown')) {
+        console.log('iOS device detected, showing install prompt');
+        
+        // 延遲顯示安裝提示
+        setTimeout(() => {
+          console.log('Showing install guide...');
+          showInstallGuide();
+          localStorage.setItem('installPromptShown', '1');
+        }, 3000);
+      } else {
+        console.log('Install prompt conditions not met');
+      }
+    };
 
     function restorePipPosition() {
       const pipContainer = document.querySelector('.pip-container');
